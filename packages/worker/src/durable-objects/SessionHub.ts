@@ -14,6 +14,9 @@ import {
 import { createDb, sessions } from '../lib/db.js';
 import { eq } from 'drizzle-orm';
 
+/** Maximum bytes to accumulate in allChunks for replay (50 MB). */
+const MAX_REPLAY_BYTES = 50 * 1024 * 1024;
+
 interface SessionState {
   sessionId: string;
   userId: string;
@@ -41,6 +44,8 @@ export class SessionHub implements DurableObject {
   // Ring buffer for late joiners
   private buffer: BufferedChunk[] = [];
   private allChunks: Uint8Array[] = [];
+  private allChunksBytes = 0;
+  private replayCapReached = false;
 
   // Rate limiting
   private bytesThisSecond = 0;
@@ -212,8 +217,15 @@ export class SessionHub implements DurableObject {
           this.buffer.shift();
         }
 
-        // Store all chunks for persistence
-        this.allChunks.push(bytes);
+        // Store all chunks for persistence (up to memory cap)
+        if (!this.replayCapReached) {
+          if (this.allChunksBytes + bytes.byteLength > MAX_REPLAY_BYTES) {
+            this.replayCapReached = true;
+          } else {
+            this.allChunks.push(bytes);
+            this.allChunksBytes += bytes.byteLength;
+          }
+        }
       }
 
       // Fan out to all viewers

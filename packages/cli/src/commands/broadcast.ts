@@ -17,6 +17,36 @@ import {
 } from '@shout/shared';
 import { getToken } from '../lib/auth.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
+import { redactSecrets } from '../lib/secrets.js';
+
+/** Env var prefixes that should never be exposed to a broadcast shell. */
+const SENSITIVE_ENV_PREFIXES = [
+  'AWS_SECRET',
+  'AWS_SESSION_TOKEN',
+  'DATABASE_URL',
+  'GITHUB_TOKEN',
+  'GH_TOKEN',
+  'NPM_TOKEN',
+  'NODE_AUTH_TOKEN',
+  'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY',
+  'STRIPE_SECRET',
+  'PRIVATE_KEY',
+  'SECRET_KEY',
+  'ENCRYPTION_KEY',
+  'JWT_SECRET',
+  'SESSION_SECRET',
+  'COOKIE_SECRET',
+  'TURSO_AUTH_TOKEN',
+  'CLOUDFLARE_API_TOKEN',
+  'SENTRY_AUTH_TOKEN',
+  'SLACK_TOKEN',
+  'SLACK_BOT_TOKEN',
+  'DISCORD_TOKEN',
+  'TWILIO_AUTH_TOKEN',
+  'SENDGRID_API_KEY',
+  'MAILGUN_API_KEY',
+];
 
 const API_BASE = process.env.SHOUT_API_URL ?? 'https://shout-worker.pavannandanmadiraju.workers.dev';
 
@@ -145,8 +175,11 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
       lastSecondReset = now;
     }
 
-    const data = buffer;
+    const raw = buffer;
     buffer = '';
+
+    // Redact secrets before sending to viewers
+    const { output: data } = redactSecrets(raw);
 
     const bytes = Buffer.byteLength(data, 'utf-8');
 
@@ -275,10 +308,13 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     const cols = process.stdout.columns || 80;
     const rows = process.stdout.rows || 24;
 
-    // Filter out undefined env values — node-pty native code requires string values
+    // Filter out undefined env values and strip known sensitive vars
     const cleanEnv: Record<string, string> = {};
     for (const [key, val] of Object.entries(process.env)) {
-      if (val !== undefined) cleanEnv[key] = val;
+      if (val === undefined) continue;
+      const upper = key.toUpperCase();
+      if (SENSITIVE_ENV_PREFIXES.some((prefix) => upper.startsWith(prefix))) continue;
+      cleanEnv[key] = val;
     }
     cleanEnv.SHOUT_SESSION = '1';
 

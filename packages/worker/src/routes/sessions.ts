@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, gte, sql } from 'drizzle-orm';
 import type { Env } from '../env.js';
 import { createDb, sessions, users, generateId } from '../lib/db.js';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
@@ -10,6 +10,7 @@ import type {
   Session,
   SessionSummary,
 } from '@shout/shared';
+import { DEFAULT_RATE_LIMITS } from '@shout/shared';
 
 const sessionsRouter = new Hono<{ Bindings: Env }>();
 
@@ -18,19 +19,53 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
   const user = c.get('user');
   const body = await c.req.json<CreateSessionRequest>().catch(() => ({} as Partial<CreateSessionRequest>));
 
-  const sessionId = generateId();
-  const now = new Date().toISOString();
+  // --- Input validation ---
+  const VALID_VISIBILITIES = ['public', 'followers', 'private'] as const;
+  const visibility = body.visibility ?? 'public';
+  if (!VALID_VISIBILITIES.includes(visibility as (typeof VALID_VISIBILITIES)[number])) {
+    return c.json<ApiResponse>({ ok: false, error: 'Invalid visibility value' }, 400);
+  }
+
+  let title = body.title ?? `${user.username}'s session`;
+  // Strip control characters and clamp length
+  title = title.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 256);
+
+  let tags: string[] = [];
+  if (body.tags) {
+    if (!Array.isArray(body.tags) || body.tags.some((t) => typeof t !== 'string')) {
+      return c.json<ApiResponse>({ ok: false, error: 'Tags must be an array of strings' }, 400);
+    }
+    if (body.tags.length > 5) {
+      return c.json<ApiResponse>({ ok: false, error: 'Maximum 5 tags allowed' }, 400);
+    }
+    tags = body.tags.map((t) => t.slice(0, 32));
+  }
 
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+
+  // --- Rate limit: max sessions per day ---
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const [countResult] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(sessions)
+    .where(and(eq(sessions.userId, user.id), gte(sessions.startedAt, todayStart.toISOString())));
+
+  if (countResult.count >= DEFAULT_RATE_LIMITS.maxSessionsPerDay) {
+    return c.json<ApiResponse>({ ok: false, error: 'Daily session limit reached' }, 429);
+  }
+
+  const sessionId = generateId();
+  const now = new Date().toISOString();
 
   const newSession = {
     id: sessionId,
     userId: user.id,
-    title: body.title ?? `${user.username}'s session`,
+    title,
     status: 'live' as const,
-    visibility: body.visibility ?? 'public',
+    visibility,
     viewerCount: 0,
-    tags: body.tags ? JSON.stringify(body.tags) : null,
+    tags: tags.length > 0 ? JSON.stringify(tags) : null,
     startedAt: now,
     endedAt: null,
   };
@@ -283,7 +318,7 @@ sessionsRouter.post('/:id/end', authMiddleware, async (c) => {
 });
 
 // GET /api/sessions/:id/replay - Get replay data for an ended session
-sessionsRouter.get('/:id/replay', async (c) => {
+sessionsRouter.get('/:id/replay', optionalAuthMiddleware, async (c) => {
   const sessionId = c.req.param('id')!;
 
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
@@ -293,6 +328,14 @@ sessionsRouter.get('/:id/replay', async (c) => {
 
   if (!session) {
     return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Private sessions require auth and ownership
+  if (session.visibility === 'private') {
+    const currentUser = c.get('user');
+    if (!currentUser || currentUser.id !== session.userId) {
+      return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+    }
   }
 
   // Ask the Durable Object for its stored chunks

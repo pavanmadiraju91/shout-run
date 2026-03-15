@@ -4,13 +4,9 @@ export const corsMiddleware = cors({
   origin: (origin) => {
     const allowed = [
       'http://localhost:3000',
-      'https://shout.dev',
-      'https://www.shout.dev',
+      'https://shout-web-delta.vercel.app',
     ];
-    // Allow exact matches
     if (allowed.includes(origin)) return origin;
-    // Allow Vercel preview/production deployments
-    if (origin.endsWith('.vercel.app')) return origin;
     return null;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
