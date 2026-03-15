@@ -97,7 +97,8 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
 
     if (naturalW === 0 || naturalH === 0) return;
 
-    const scale = Math.min(containerW / naturalW, containerH / naturalH, 1);
+    // Scale up or down to fill the container while preserving aspect ratio
+    const scale = Math.min(containerW / naturalW, containerH / naturalH);
     xtermScreen.style.transform = `scale(${scale})`;
     xtermScreen.style.transformOrigin = 'top left';
   }, []);
