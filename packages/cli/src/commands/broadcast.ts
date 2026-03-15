@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import * as pty from 'node-pty';
+import { input, select } from '@inquirer/prompts';
 import {
   encodeOutputFrame,
   encodeEndFrame,
@@ -16,6 +17,7 @@ import {
   type ApiResponse,
 } from '@shout/shared';
 import { getToken } from '../lib/auth.js';
+import { login } from './login.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
 import { redactSecrets } from '../lib/secrets.js';
 
@@ -114,12 +116,44 @@ async function createSession(
 
 export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   const isPiped = !process.stdin.isTTY;
+  const isTTY = !isPiped;
 
-  // Check authentication
-  const tokens = await getToken();
+  // Check authentication — auto-login if needed
+  let tokens = await getToken();
   if (!tokens || !tokens.accessToken) {
-    console.log(chalk.red('Not logged in. Run `shout login` first.'));
-    process.exit(1);
+    if (isTTY) {
+      console.log();
+      console.log(chalk.yellow('  Not logged in. Let\'s fix that...'));
+      console.log();
+      await login();
+      tokens = await getToken();
+      if (!tokens || !tokens.accessToken) {
+        console.log(chalk.red('Login failed. Please try again.'));
+        process.exit(1);
+      }
+      console.log();
+    } else {
+      console.log(chalk.red('Not logged in. Run `shout login` first.'));
+      process.exit(1);
+    }
+  }
+
+  // Interactive prompts when in TTY mode and no flags given
+  if (isTTY && !options.title) {
+    options.title = await input({
+      message: 'Session title',
+      default: `${tokens.username}'s session`,
+    });
+  }
+
+  if (isTTY && !options.visibility) {
+    options.visibility = await select({
+      message: 'Visibility',
+      choices: [
+        { name: 'Public', value: 'public' as const },
+        { name: 'Private', value: 'private' as const },
+      ],
+    });
   }
 
   const spinner = ora('Creating broadcast session...').start();
@@ -138,11 +172,17 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   const WEB_BASE = process.env.SHOUT_WEB_URL ?? 'https://shout-web-delta.vercel.app';
   const sessionUrl = `${WEB_BASE}/${tokens.username}/${session.sessionId}`;
   console.log();
-  console.log(chalk.bold('Broadcasting live at:'));
+  console.log(chalk.bold('  Live at:'));
   console.log(chalk.cyan(`  ${sessionUrl}`));
   console.log();
 
-  if (!isPiped) {
+  // Countdown before PTY starts
+  if (isTTY) {
+    for (const n of [3, 2, 1]) {
+      process.stdout.write(chalk.bold(`  Starting in ${n}...`));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      process.stdout.write('\r\x1b[K');
+    }
     console.log(chalk.dim('  Your terminal is now being shared. Type `exit` or press Ctrl+D to stop.'));
     console.log();
   }
