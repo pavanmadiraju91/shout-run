@@ -4,10 +4,12 @@ import {
   encodeEndFrame,
   encodeViewerCountFrame,
   encodeMetaFrame,
+  encodePing,
   FrameType,
   WS_CLOSE,
   LATE_JOINER_BUFFER_SIZE,
   DEFAULT_RATE_LIMITS,
+  PING_INTERVAL_MS,
 } from '@shout/shared';
 import { createDb, sessions } from '../lib/db.js';
 import { eq } from 'drizzle-orm';
@@ -44,6 +46,9 @@ export class SessionHub implements DurableObject {
   private bytesThisSecond = 0;
   private lastRateLimitReset = 0;
 
+  // Heartbeat: tracks last message from broadcaster for dead-connection detection
+  private lastBroadcasterActivity = 0;
+
   constructor(state: DurableObjectState, env: Env) {
     this.state = state;
     this.env = env;
@@ -70,10 +75,7 @@ export class SessionHub implements DurableObject {
       };
       await this.state.storage.put('sessionState', this.sessionState);
 
-      // Set alarm for max session duration (4 hours)
-      const alarmTime = Date.now() + DEFAULT_RATE_LIMITS.maxSessionDurationMs;
-      await this.state.storage.setAlarm(alarmTime);
-
+      // Alarm chain starts when broadcaster connects in handleBroadcasterUpgrade()
       return new Response('OK', { status: 200 });
     }
 
@@ -120,6 +122,10 @@ export class SessionHub implements DurableObject {
 
     this.state.acceptWebSocket(server, ['broadcaster']);
     this.broadcaster = server;
+    this.lastBroadcasterActivity = Date.now();
+
+    // Start heartbeat alarm chain (also covers max duration)
+    await this.state.storage.setAlarm(Date.now() + PING_INTERVAL_MS);
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -165,6 +171,9 @@ export class SessionHub implements DurableObject {
     if (ws !== this.broadcaster) {
       return;
     }
+
+    // Any message from broadcaster = proof of life
+    this.lastBroadcasterActivity = Date.now();
 
     // Rate limiting
     const now = Date.now();
@@ -420,11 +429,38 @@ export class SessionHub implements DurableObject {
   }
 
   async alarm(): Promise<void> {
-    // Max session duration reached
-    if (this.broadcaster) {
-      this.broadcaster.close(WS_CLOSE.MAX_DURATION, 'Maximum session duration reached');
+    // Check max session duration first
+    if (this.sessionState) {
+      const elapsed = Date.now() - this.sessionState.startedAt;
+      if (elapsed >= DEFAULT_RATE_LIMITS.maxSessionDurationMs) {
+        if (this.broadcaster) {
+          this.broadcaster.close(WS_CLOSE.MAX_DURATION, 'Maximum session duration reached');
+        }
+        return; // webSocketClose handles cleanup
+      }
     }
 
-    // This will trigger webSocketClose which handles cleanup
+    // No broadcaster connected — nothing to ping
+    if (!this.broadcaster) {
+      return;
+    }
+
+    // Dead-connection detection: no activity for 2 intervals → treat as dead
+    const silenceDuration = Date.now() - this.lastBroadcasterActivity;
+    if (silenceDuration > PING_INTERVAL_MS * 2) {
+      await this.handleBroadcasterClose();
+      return;
+    }
+
+    // Send app-level ping and schedule next heartbeat
+    try {
+      this.broadcaster.send(encodePing());
+    } catch {
+      // Send failed — broadcaster is gone
+      await this.handleBroadcasterClose();
+      return;
+    }
+
+    await this.state.storage.setAlarm(Date.now() + PING_INTERVAL_MS);
   }
 }

@@ -5,6 +5,7 @@ import {
   encodeOutputFrame,
   encodeEndFrame,
   encodeResizeFrame,
+  encodePong,
   decodeFrame,
   decodeViewerCount,
   FrameType,
@@ -169,6 +170,10 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     if (data instanceof ArrayBuffer) {
       try {
         const frame = decodeFrame(new Uint8Array(data));
+        if (frame.type === FrameType.Ping) {
+          ws.send(encodePong());
+          return;
+        }
         if (frame.type === FrameType.ViewerCount) {
           stats.viewerCount = decodeViewerCount(frame.payload);
         }
