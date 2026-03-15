@@ -205,6 +205,17 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isEnding = false;
 
+  // Max payload per WebSocket message — stay well under Cloudflare's 1 MB limit
+  const MAX_CHUNK_BYTES = 64 * 1024; // 64 KB
+
+  function sendChunk(data: string): void {
+    const bytes = Buffer.byteLength(data, 'utf-8');
+    stats.bytesSent += bytes;
+    const timestampSec = Math.floor((Date.now() - stats.startTime) / 1000);
+    const frame = encodeOutputFrame(data, timestampSec);
+    ws.send(frame);
+  }
+
   function flushBuffer(): void {
     if (buffer.length === 0) return;
 
@@ -217,24 +228,35 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     const raw = buffer;
     buffer = '';
 
-    const data = raw;
+    const totalBytes = Buffer.byteLength(raw, 'utf-8');
 
-    const bytes = Buffer.byteLength(data, 'utf-8');
-
-    if (bytesThisSecond + bytes > maxBytesPerSecond) {
+    if (bytesThisSecond + totalBytes > maxBytesPerSecond) {
       setTimeout(() => {
-        buffer = data + buffer;
+        buffer = raw + buffer;
         flushBuffer();
       }, 1000 - (now - lastSecondReset));
       return;
     }
 
-    bytesThisSecond += bytes;
-    stats.bytesSent += bytes;
+    bytesThisSecond += totalBytes;
 
-    const timestampSec = Math.floor((Date.now() - stats.startTime) / 1000);
-    const frame = encodeOutputFrame(data, timestampSec);
-    ws.send(frame);
+    // Split into chunks to avoid exceeding WebSocket message size limits
+    if (totalBytes <= MAX_CHUNK_BYTES) {
+      sendChunk(raw);
+    } else {
+      let offset = 0;
+      while (offset < raw.length) {
+        // Binary-safe slicing: walk forward until we hit the byte budget
+        let end = offset + MAX_CHUNK_BYTES;
+        if (end > raw.length) end = raw.length;
+        // Avoid splitting a multi-byte char: step back if we're mid-surrogate
+        while (end > offset && raw.charCodeAt(end - 1) >= 0xd800 && raw.charCodeAt(end - 1) <= 0xdbff) {
+          end--;
+        }
+        sendChunk(raw.slice(offset, end));
+        offset = end;
+      }
+    }
   }
 
   ws.on('message', (data) => {
