@@ -309,6 +309,7 @@ export class SessionHub implements DurableObject {
 
   private async persistSession(): Promise<void> {
     if (!this.sessionState || this.allChunks.length === 0) return;
+    if (!this.env.SESSIONS_BUCKET) return; // R2 not enabled
 
     try {
       // Concatenate all chunks into single binary

@@ -12,9 +12,10 @@ bindings = [
 tag = "v1"
 new_classes = ["SessionHub"]
 
-[[r2_buckets]]
-binding = "SESSIONS_BUCKET"
-bucket_name = "shout-sessions"
+# Uncomment when R2 is enabled in Cloudflare dashboard:
+# [[r2_buckets]]
+# binding = "SESSIONS_BUCKET"
+# bucket_name = "shout-sessions"
 
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
