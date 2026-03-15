@@ -44,6 +44,7 @@ export default function SessionViewerPage() {
 
   // xterm ref for replay controller
   const [xtermInstance, setXtermInstance] = useState<XTerm | null>(null);
+  const [resizeHandler, setResizeHandler] = useState<((cols: number, rows: number) => void) | null>(null);
 
   useEffect(() => {
     async function loadSession() {
@@ -84,6 +85,10 @@ export default function SessionViewerPage() {
     setXtermInstance(xterm);
   }, []);
 
+  const handleResizeReady = useCallback((handler: (cols: number, rows: number) => void) => {
+    setResizeHandler(() => handler);
+  }, []);
+
   const handleShare = useCallback(async () => {
     const url = `${window.location.origin}/${username}/${sessionId}`;
     if (navigator.share) {
@@ -106,6 +111,7 @@ export default function SessionViewerPage() {
   const replay = useReplayController(
     !isLive ? sessionId : '',
     !isLive ? xtermInstance : null,
+    resizeHandler ?? undefined,
   );
 
   // Compute session total duration for ended sessions
@@ -115,7 +121,7 @@ export default function SessionViewerPage() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-[calc(100vh-64px)]">
+      <div className="flex flex-col h-[calc(100vh-3.5rem)]">
         <div className="bg-shout-surface border-b border-shout-border px-4 py-3">
           <div className="animate-pulse flex items-center gap-3">
             <div className="w-10 h-10 bg-shout-border rounded-full"></div>
@@ -132,7 +138,7 @@ export default function SessionViewerPage() {
 
   if (error || !session) {
     return (
-      <div className="flex flex-col items-center justify-center h-[calc(100vh-64px)]">
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-3.5rem)]">
         <svg
           className="w-14 h-14 text-shout-muted mb-4"
           fill="none"
@@ -161,7 +167,7 @@ export default function SessionViewerPage() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
       {/* Session Header — 3-column grid */}
       <div className="bg-shout-surface border-b border-shout-border px-4 py-3">
         <div className="max-w-screen-2xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-3">
@@ -263,6 +269,7 @@ export default function SessionViewerPage() {
         onViewerCountChange={handleViewerCountChange}
         replayMode={!isLive}
         onTerminalReady={handleTerminalReady}
+        onResizeReady={handleResizeReady}
       />
 
       {/* Player bar at bottom (ended sessions only) */}

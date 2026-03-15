@@ -66,9 +66,10 @@ interface TerminalProps {
   onViewerCountChange?: (count: number) => void;
   replayMode?: boolean;
   onTerminalReady?: (xterm: XTerm) => void;
+  onResizeReady?: (handler: (cols: number, rows: number) => void) => void;
 }
 
-export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange, replayMode, onTerminalReady }: TerminalProps) {
+export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange, replayMode, onTerminalReady, onResizeReady }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -90,6 +91,9 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
   /**
    * Calculate the optimal fontSize so that the broadcaster's cols×rows
    * fills the container without overflow, then resize xterm to match.
+   *
+   * Uses xterm's actual rendered cell dimensions (like asciinema-player)
+   * instead of hardcoded character-width ratios for accurate sizing.
    */
   const fitToContainer = useCallback(() => {
     const container = terminalRef.current;
@@ -107,16 +111,32 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
     const containerH = container.clientHeight;
     if (containerW === 0 || containerH === 0) return;
 
-    // Account for xterm padding (12px each side from CSS)
+    // Account for xterm padding (12px each side from globals.css .xterm rule)
     const availW = containerW - 24;
     const availH = containerH - 24;
 
-    // Calculate fontSize that makes cols×rows fit the container.
-    // Cell width ≈ fontSize × 0.6, cell height ≈ fontSize × lineHeight.
-    // Use floor and a small safety margin to prevent overflow.
-    const maxFontByWidth = availW / (size.cols * 0.6);
-    const maxFontByHeight = availH / (size.rows * xterm.options.lineHeight!);
-    const newFontSize = Math.max(8, Math.min(Math.floor(Math.min(maxFontByWidth, maxFontByHeight) * 0.95), 32));
+    // Measure actual cell dimensions from xterm's renderer, then scale
+    // fontSize proportionally to fit the broadcaster's grid.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dims = (xterm as any)._core?._renderService?.dimensions;
+    const currentFontSize = xterm.options.fontSize ?? 14;
+
+    let cellW: number;
+    let cellH: number;
+
+    if (dims?.css?.cell?.width && dims?.css?.cell?.height) {
+      cellW = dims.css.cell.width;
+      cellH = dims.css.cell.height;
+    } else {
+      // Fallback: approximate ratios (only on first render before renderer is ready)
+      cellW = currentFontSize * 0.6;
+      cellH = currentFontSize * (xterm.options.lineHeight ?? 1.2);
+    }
+
+    // Scale fontSize so cols×rows fits within the available space
+    const maxFontByWidth = (availW / (size.cols * cellW)) * currentFontSize;
+    const maxFontByHeight = (availH / (size.rows * cellH)) * currentFontSize;
+    const newFontSize = Math.max(8, Math.min(Math.floor(Math.min(maxFontByWidth, maxFontByHeight)), 48));
 
     if (newFontSize !== xterm.options.fontSize) {
       xterm.options.fontSize = newFontSize;
@@ -208,8 +228,9 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
       socketRef.current = createSocket(sessionId, callbacks);
       socketRef.current.connect();
     } else if (replayMode) {
-      // External replay controller manages playback — just expose the xterm instance
+      // External replay controller manages playback — expose the xterm instance and resize handler
       onTerminalReady?.(xterm);
+      onResizeReady?.(handleResize);
     } else {
       // Legacy: internal replay for ended sessions
       fetchReplayData(sessionId, xterm, broadcasterSizeRef, fitToContainer);
@@ -220,7 +241,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
       socketRef.current?.disconnect();
       xterm.dispose();
     };
-  }, [sessionId, isLive, replayMode, onTerminalReady, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, fitToContainer, theme]);
+  }, [sessionId, isLive, replayMode, onTerminalReady, onResizeReady, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, fitToContainer, theme]);
 
   const ariaLabel = sessionTitle ? `Terminal session: ${sessionTitle}` : 'Terminal session';
 
@@ -231,7 +252,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
       className="flex-1 relative bg-shout-bg overflow-hidden"
       style={{ minHeight: 0 }}
     >
-      <div ref={terminalRef} className="absolute inset-0 p-2" />
+      <div ref={terminalRef} className="absolute inset-0" />
       <div ref={announceRef} className="sr-only" aria-live="polite" />
     </div>
   );
