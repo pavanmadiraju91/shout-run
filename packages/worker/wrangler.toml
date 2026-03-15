@@ -10,7 +10,7 @@ bindings = [
 
 [[migrations]]
 tag = "v1"
-new_classes = ["SessionHub"]
+new_sqlite_classes = ["SessionHub"]
 
 # Uncomment when R2 is enabled in Cloudflare dashboard:
 # [[r2_buckets]]
