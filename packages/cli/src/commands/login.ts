@@ -1,109 +1,75 @@
 import chalk from 'chalk';
 import ora from 'ora';
 import open from 'open';
-import {
-  GITHUB_DEVICE_CODE_URL,
-  GITHUB_ACCESS_TOKEN_URL,
-  GITHUB_USER_URL,
-  type DeviceCodeResponse,
-  type TokenResponse,
-} from '@shout/shared';
-import { saveToken, isLoggedIn } from '../lib/auth.js';
+import type { DeviceCodeResponse, ApiResponse, AuthTokens } from '@shout/shared';
+import { saveToken, isLoggedIn, removeToken } from '../lib/auth.js';
 
-const GITHUB_CLIENT_ID = process.env.SHOUT_GITHUB_CLIENT_ID ?? 'Ov23liddvm9lUJ0926A4';
-
-interface GitHubUser {
-  login: string;
-  avatar_url: string;
-}
+const API_BASE = process.env.SHOUT_API_URL ?? 'https://shout-worker.pavannandanmadiraju.workers.dev';
 
 async function requestDeviceCode(): Promise<DeviceCodeResponse> {
-  const response = await fetch(GITHUB_DEVICE_CODE_URL, {
+  const response = await fetch(`${API_BASE}/api/auth/device-code`, {
     method: 'POST',
     headers: {
-      Accept: 'application/json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      client_id: GITHUB_CLIENT_ID,
-      scope: 'read:user',
-    }),
   });
 
   if (!response.ok) {
     throw new Error(`Failed to get device code: ${response.status}`);
   }
 
-  return (await response.json()) as DeviceCodeResponse;
+  const result = (await response.json()) as ApiResponse<DeviceCodeResponse>;
+  if (!result.ok || !result.data) {
+    throw new Error(result.error ?? 'Failed to get device code');
+  }
+
+  return result.data;
 }
 
 async function pollForToken(
   deviceCode: string,
   interval: number,
   expiresIn: number,
-): Promise<TokenResponse | null> {
+): Promise<AuthTokens | null> {
   const startTime = Date.now();
   const expiresAt = startTime + expiresIn * 1000;
 
   while (Date.now() < expiresAt) {
     await new Promise((resolve) => setTimeout(resolve, interval * 1000));
 
-    const response = await fetch(GITHUB_ACCESS_TOKEN_URL, {
+    const response = await fetch(`${API_BASE}/api/auth/token`, {
       method: 'POST',
       headers: {
-        Accept: 'application/json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        client_id: GITHUB_CLIENT_ID,
-        device_code: deviceCode,
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-      }),
+      body: JSON.stringify({ device_code: deviceCode }),
     });
 
-    const data = (await response.json()) as
-      | TokenResponse
-      | { error: string; error_description?: string };
+    const result = (await response.json()) as ApiResponse<AuthTokens>;
 
-    if ('access_token' in data) {
-      return data;
+    if (result.ok && result.data) {
+      return result.data;
     }
 
-    if ('error' in data) {
-      if (data.error === 'authorization_pending') {
+    if (result.error) {
+      if (result.error === 'authorization_pending') {
         continue;
       }
-      if (data.error === 'slow_down') {
-        // Increase interval by 5 seconds as per RFC 8628
+      if (result.error === 'slow_down') {
         interval += 5;
         continue;
       }
-      if (data.error === 'expired_token') {
+      if (result.error === 'expired_token') {
         return null;
       }
-      if (data.error === 'access_denied') {
+      if (result.error === 'access_denied') {
         throw new Error('Authorization denied by user');
       }
-      throw new Error(data.error_description ?? data.error);
+      throw new Error(result.error);
     }
   }
 
   return null;
-}
-
-async function fetchGitHubUser(accessToken: string): Promise<GitHubUser> {
-  const response = await fetch(GITHUB_USER_URL, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch user info: ${response.status}`);
-  }
-
-  return (await response.json()) as GitHubUser;
 }
 
 export async function login(): Promise<void> {
@@ -113,7 +79,7 @@ export async function login(): Promise<void> {
     return;
   }
 
-  const spinner = ora('Requesting device code from GitHub...').start();
+  const spinner = ora('Connecting to shout server...').start();
 
   try {
     const deviceCode = await requestDeviceCode();
@@ -137,31 +103,28 @@ export async function login(): Promise<void> {
     console.log();
     const pollSpinner = ora('Waiting for authorization...').start();
 
-    const token = await pollForToken(
+    const tokens = await pollForToken(
       deviceCode.device_code,
       deviceCode.interval,
       deviceCode.expires_in,
     );
 
-    if (!token) {
+    if (!tokens) {
       pollSpinner.fail('Authorization expired. Please try again.');
       process.exit(1);
     }
 
-    pollSpinner.text = 'Fetching user info...';
+    await saveToken(tokens);
 
-    const user = await fetchGitHubUser(token.access_token);
-
-    await saveToken({
-      accessToken: token.access_token,
-      username: user.login,
-      avatarUrl: user.avatar_url,
-    });
-
-    pollSpinner.succeed(`Logged in as ${chalk.bold(user.login)}`);
+    pollSpinner.succeed(`Logged in as ${chalk.bold(tokens.username)}`);
   } catch (error) {
     spinner.fail('Login failed');
     console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
     process.exit(1);
   }
+}
+
+export async function logout(): Promise<void> {
+  await removeToken();
+  console.log(chalk.green('Logged out successfully.'));
 }

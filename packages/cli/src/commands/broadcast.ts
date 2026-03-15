@@ -131,10 +131,9 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   let bytesThisSecond = 0;
   let lastSecondReset = Date.now();
 
-  // Connect WebSocket
-  const ws = new ReconnectingWebSocket(session.wsUrl, {
-    Authorization: `Bearer ${tokens.accessToken}`,
-  });
+  // Connect WebSocket — pass token as query param (Cloudflare Workers don't support custom WS headers)
+  const wsUrlWithAuth = `${session.wsUrl}?token=${encodeURIComponent(tokens.accessToken)}`;
+  const ws = new ReconnectingWebSocket(wsUrlWithAuth);
 
   let buffer = '';
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;

@@ -11,9 +11,9 @@ interface CompiledPattern {
   replacement: string;
 }
 
-const compiledPatterns: CompiledPattern[] = secretPatterns.map((p) => ({
+const compiledPatterns: CompiledPattern[] = secretPatterns.map((p: SecretPattern & { flags?: string }) => ({
   name: p.name,
-  regex: new RegExp(p.pattern, 'g'),
+  regex: new RegExp(p.pattern, p.flags ?? 'g'),
   confidence: p.confidence,
   replacement: p.replacement,
 }));
