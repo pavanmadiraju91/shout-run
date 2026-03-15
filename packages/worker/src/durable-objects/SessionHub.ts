@@ -50,6 +50,10 @@ export class SessionHub implements DurableObject {
   private allChunksBytes = 0;
   private replayCapReached = false;
 
+  // Tracks how many chunks from allChunks have already been flushed to DO storage.
+  // After hibernation wake, allChunks is empty but storage has the persisted data.
+  private flushedChunkCount = 0;
+
   // Rate limiting
   private bytesThisSecond = 0;
   private lastRateLimitReset = 0;
@@ -445,23 +449,30 @@ export class SessionHub implements DurableObject {
     }
   }
 
+  /**
+   * Incrementally flush new in-memory chunks to DO storage.
+   * Only converts and appends chunks that haven't been flushed yet,
+   * so replay data survives Durable Object hibernation.
+   */
   private async persistReplayToStorage(): Promise<void> {
-    if (this.allChunks.length === 0) return;
+    // Only flush chunks we haven't persisted yet
+    const newChunks = this.allChunks.slice(this.flushedChunkCount);
+    if (newChunks.length === 0) return;
 
-    const chunks: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
-    for (const raw of this.allChunks) {
+    const converted: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
+    for (const raw of newChunks) {
       try {
         const frame = decodeFrame(raw);
         if (frame.type === FrameType.Output) {
           const text = new TextDecoder().decode(frame.payload);
-          chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+          converted.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
         } else if (frame.type === FrameType.Resize) {
           const view = new DataView(
             frame.payload.buffer,
             frame.payload.byteOffset,
             frame.payload.byteLength,
           );
-          chunks.push({
+          converted.push({
             type: 'resize',
             data: '',
             timestamp: frame.timestamp * 1000,
@@ -474,7 +485,16 @@ export class SessionHub implements DurableObject {
       }
     }
 
-    await this.state.storage.put('replayChunks', chunks);
+    if (converted.length === 0) return;
+
+    // Load existing persisted chunks and append
+    const existing =
+      await this.state.storage.get<Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }>>(
+        'replayChunks',
+      ) ?? [];
+
+    await this.state.storage.put('replayChunks', [...existing, ...converted]);
+    this.flushedChunkCount = this.allChunks.length;
   }
 
   private async handleReplay(): Promise<Response> {
@@ -632,6 +652,9 @@ export class SessionHub implements DurableObject {
       await this.handleBroadcasterClose();
       return;
     }
+
+    // Periodically flush replay chunks to DO storage so data survives hibernation
+    await this.persistReplayToStorage();
 
     // Send app-level ping and schedule next heartbeat
     try {
