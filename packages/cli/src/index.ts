@@ -42,7 +42,7 @@ program
   .command('broadcast', { isDefault: true })
   .description('Start broadcasting your terminal')
   .option('-t, --title <title>', 'Session title')
-  .option('-v, --visibility <visibility>', 'Visibility: public, followers, private', 'public')
+  .option('-v, --visibility <visibility>', 'Visibility: public, followers, private')
   .option('--tags <tags>', 'Comma-separated tags')
   .action(async (options: { title?: string; visibility?: string; tags?: string }) => {
     await broadcast({

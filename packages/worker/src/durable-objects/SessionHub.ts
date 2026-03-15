@@ -160,9 +160,16 @@ export class SessionHub implements DurableObject {
     });
     server.send(metaFrame);
 
-    // Send buffered chunks for late joiners
-    for (const chunk of this.buffer) {
-      server.send(chunk.data);
+    // Send full session history for late joiners (falls back to ring buffer
+    // if the replay cap was reached and allChunks stopped accumulating)
+    if (this.allChunks.length > 0) {
+      for (const chunk of this.allChunks) {
+        server.send(chunk);
+      }
+    } else {
+      for (const chunk of this.buffer) {
+        server.send(chunk.data);
+      }
     }
 
     // Update and broadcast viewer count

@@ -19,7 +19,6 @@ import {
 import { getToken } from '../lib/auth.js';
 import { login } from './login.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
-import { redactSecrets } from '../lib/secrets.js';
 
 /** Env var prefixes that should never be exposed to a broadcast shell. */
 const SENSITIVE_ENV_PREFIXES = [
@@ -218,8 +217,7 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     const raw = buffer;
     buffer = '';
 
-    // Redact secrets before sending to viewers
-    const { output: data } = redactSecrets(raw);
+    const data = raw;
 
     const bytes = Buffer.byteLength(data, 'utf-8');
 
