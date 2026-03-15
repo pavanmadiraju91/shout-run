@@ -17,7 +17,7 @@ import { getToken } from '../lib/auth.js';
 import { redactSecrets } from '../lib/secrets.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
 
-const API_BASE = process.env.SHOUT_API_URL ?? 'https://shout.dev';
+const API_BASE = process.env.SHOUT_API_URL ?? 'https://shout-worker.pavannandanmadiraju.workers.dev';
 
 interface BroadcastOptions {
   title?: string;

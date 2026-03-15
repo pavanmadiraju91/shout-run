@@ -10,7 +10,7 @@ import {
 } from '@shout/shared';
 import { saveToken, isLoggedIn } from '../lib/auth.js';
 
-const GITHUB_CLIENT_ID = process.env.SHOUT_GITHUB_CLIENT_ID ?? 'Ov23liJLOo5RYnVvvvvv';
+const GITHUB_CLIENT_ID = process.env.SHOUT_GITHUB_CLIENT_ID ?? 'Ov23liddvm9lUJ0926A4';
 
 interface GitHubUser {
   login: string;
