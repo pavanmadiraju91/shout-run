@@ -2,8 +2,8 @@ export interface Env {
   // Durable Objects
   SESSION_HUB: DurableObjectNamespace;
 
-  // R2 Storage (optional — enable R2 in Cloudflare dashboard to use)
-  SESSIONS_BUCKET?: R2Bucket;
+  // R2 Storage (bound via wrangler.toml)
+  SESSIONS_BUCKET: R2Bucket;
 
   // KV Namespaces
   RATE_LIMITS: KVNamespace;

@@ -404,48 +404,62 @@ export class SessionHub implements DurableObject {
     if (!this.env.SESSIONS_BUCKET) return; // R2 not enabled
 
     try {
-      // Concatenate all chunks into single binary
-      const totalLength = this.allChunks.reduce((sum, chunk) => sum + chunk.length, 0);
-      const combined = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const chunk of this.allChunks) {
-        combined.set(chunk, offset);
-        offset += chunk.length;
+      // Convert binary frames to JSON chunks (same format as DO storage replayChunks)
+      const chunks: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
+      for (const raw of this.allChunks) {
+        try {
+          const frame = decodeFrame(raw);
+          if (frame.type === FrameType.Output) {
+            const text = new TextDecoder().decode(frame.payload);
+            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+          } else if (frame.type === FrameType.Resize) {
+            const view = new DataView(
+              frame.payload.buffer,
+              frame.payload.byteOffset,
+              frame.payload.byteLength,
+            );
+            chunks.push({
+              type: 'resize',
+              data: '',
+              timestamp: frame.timestamp * 1000,
+              cols: view.getUint16(0),
+              rows: view.getUint16(2),
+            });
+          }
+        } catch {
+          // Skip corrupt frames
+        }
       }
 
-      // Store session binary data
+      if (chunks.length === 0) return;
+
+      // Store replay data as JSON (readable by handleReplay without binary parsing)
       await this.env.SESSIONS_BUCKET.put(
-        `sessions/${this.sessionState.sessionId}.bin`,
-        combined,
+        `sessions/${this.sessionState.sessionId}.json`,
+        JSON.stringify({ chunks }),
         {
-          customMetadata: {
-            sessionId: this.sessionState.sessionId,
-            userId: this.sessionState.userId,
-          },
+          httpMetadata: { contentType: 'application/json' },
         },
       );
 
       // Store session metadata
-      const metadata = {
-        sessionId: this.sessionState.sessionId,
-        userId: this.sessionState.userId,
-        username: this.sessionState.username,
-        title: this.sessionState.title,
-        startedAt: this.sessionState.startedAt,
-        endedAt: Date.now(),
-        chunkCount: this.allChunks.length,
-        totalBytes: totalLength,
-      };
-
       await this.env.SESSIONS_BUCKET.put(
         `sessions/${this.sessionState.sessionId}.meta.json`,
-        JSON.stringify(metadata),
+        JSON.stringify({
+          sessionId: this.sessionState.sessionId,
+          userId: this.sessionState.userId,
+          username: this.sessionState.username,
+          title: this.sessionState.title,
+          startedAt: this.sessionState.startedAt,
+          endedAt: Date.now(),
+          chunkCount: chunks.length,
+        }),
         {
           httpMetadata: { contentType: 'application/json' },
         },
       );
     } catch (err) {
-      console.error('Error persisting session:', err);
+      console.error('Error persisting session to R2:', err);
     }
   }
 
@@ -498,6 +512,11 @@ export class SessionHub implements DurableObject {
   }
 
   private async handleReplay(): Promise<Response> {
+    // Ensure session state is loaded (needed for R2 fallback)
+    if (!this.sessionState) {
+      this.sessionState = await this.state.storage.get<SessionState>('sessionState') ?? null;
+    }
+
     // Try in-memory first (session still alive)
     if (this.allChunks.length > 0) {
       const chunks: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
@@ -532,9 +551,29 @@ export class SessionHub implements DurableObject {
 
     // Fall back to DO storage (after eviction/restart)
     const stored = await this.state.storage.get<Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }>>('replayChunks');
-    const chunks = stored ?? [];
+    if (stored && stored.length > 0) {
+      return new Response(JSON.stringify({ chunks: stored }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
 
-    return new Response(JSON.stringify({ chunks }), {
+    // Fall back to R2 (permanent archive)
+    if (this.env.SESSIONS_BUCKET && this.sessionState) {
+      try {
+        const r2Object = await this.env.SESSIONS_BUCKET.get(
+          `sessions/${this.sessionState.sessionId}.json`,
+        );
+        if (r2Object) {
+          return new Response(r2Object.body, {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+      } catch (err) {
+        console.error('Error reading replay from R2:', err);
+      }
+    }
+
+    return new Response(JSON.stringify({ chunks: [] }), {
       headers: { 'Content-Type': 'application/json' },
     });
   }
@@ -580,8 +619,24 @@ export class SessionHub implements DurableObject {
         }
       }
     } else {
+      // Fall back to DO storage
       const stored = await this.state.storage.get<ReplayChunk[]>('replayChunks');
       chunks = stored ?? [];
+
+      // Fall back to R2 if DO storage is empty
+      if (chunks.length === 0 && this.env.SESSIONS_BUCKET && this.sessionState) {
+        try {
+          const r2Object = await this.env.SESSIONS_BUCKET.get(
+            `sessions/${this.sessionState.sessionId}.json`,
+          );
+          if (r2Object) {
+            const r2Data = await r2Object.json<{ chunks: ReplayChunk[] }>();
+            chunks = r2Data.chunks ?? [];
+          }
+        } catch (err) {
+          console.error('Error reading export data from R2:', err);
+        }
+      }
     }
 
     if (chunks.length === 0) {
