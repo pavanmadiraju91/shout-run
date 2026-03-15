@@ -411,7 +411,7 @@ export class SessionHub implements DurableObject {
           const frame = decodeFrame(raw);
           if (frame.type === FrameType.Output) {
             const text = new TextDecoder().decode(frame.payload);
-            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp });
           } else if (frame.type === FrameType.Resize) {
             const view = new DataView(
               frame.payload.buffer,
@@ -421,7 +421,7 @@ export class SessionHub implements DurableObject {
             chunks.push({
               type: 'resize',
               data: '',
-              timestamp: frame.timestamp * 1000,
+              timestamp: frame.timestamp,
               cols: view.getUint16(0),
               rows: view.getUint16(2),
             });
@@ -479,7 +479,7 @@ export class SessionHub implements DurableObject {
         const frame = decodeFrame(raw);
         if (frame.type === FrameType.Output) {
           const text = new TextDecoder().decode(frame.payload);
-          converted.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+          converted.push({ type: 'output', data: text, timestamp: frame.timestamp });
         } else if (frame.type === FrameType.Resize) {
           const view = new DataView(
             frame.payload.buffer,
@@ -489,7 +489,7 @@ export class SessionHub implements DurableObject {
           converted.push({
             type: 'resize',
             data: '',
-            timestamp: frame.timestamp * 1000,
+            timestamp: frame.timestamp,
             cols: view.getUint16(0),
             rows: view.getUint16(2),
           });
@@ -525,7 +525,7 @@ export class SessionHub implements DurableObject {
           const frame = decodeFrame(raw);
           if (frame.type === FrameType.Output) {
             const text = new TextDecoder().decode(frame.payload);
-            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp });
           } else if (frame.type === FrameType.Resize) {
             const view = new DataView(
               frame.payload.buffer,
@@ -535,7 +535,7 @@ export class SessionHub implements DurableObject {
             chunks.push({
               type: 'resize',
               data: '',
-              timestamp: frame.timestamp * 1000,
+              timestamp: frame.timestamp,
               cols: view.getUint16(0),
               rows: view.getUint16(2),
             });
@@ -599,7 +599,7 @@ export class SessionHub implements DurableObject {
           const frame = decodeFrame(raw);
           if (frame.type === FrameType.Output) {
             const text = new TextDecoder().decode(frame.payload);
-            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp });
           } else if (frame.type === FrameType.Resize) {
             const view = new DataView(
               frame.payload.buffer,
@@ -609,7 +609,7 @@ export class SessionHub implements DurableObject {
             chunks.push({
               type: 'resize',
               data: '',
-              timestamp: frame.timestamp * 1000,
+              timestamp: frame.timestamp,
               cols: view.getUint16(0),
               rows: view.getUint16(2),
             });

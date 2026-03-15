@@ -2,7 +2,7 @@
  * Binary WebSocket protocol for shout.
  *
  * Frame format:
- *   [type: 1 byte][timestamp: 4 bytes (uint32, seconds since session start)][payload: variable]
+ *   [type: 1 byte][timestamp: 4 bytes (uint32, milliseconds since session start)][payload: variable]
  *
  * This is ~3x smaller than JSON for terminal output chunks.
  */

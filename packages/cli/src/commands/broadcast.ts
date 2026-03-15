@@ -211,8 +211,8 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   function sendChunk(data: string): void {
     const bytes = Buffer.byteLength(data, 'utf-8');
     stats.bytesSent += bytes;
-    const timestampSec = Math.floor((Date.now() - stats.startTime) / 1000);
-    const frame = encodeOutputFrame(data, timestampSec);
+    const timestampMs = Date.now() - stats.startTime;
+    const frame = encodeOutputFrame(data, timestampMs);
     ws.send(frame);
   }
 
