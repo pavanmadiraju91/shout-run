@@ -18,22 +18,10 @@ bucket_name = "shout-sessions"
 
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "placeholder-kv-id"
+id = "f0b42db3fede40d396def6137f0b668a"
 
 [vars]
-GITHUB_CLIENT_ID = ""
-GITHUB_CLIENT_SECRET = ""
-TURSO_URL = ""
-TURSO_AUTH_TOKEN = ""
-JWT_SECRET = ""
+TURSO_URL = "libsql://shout-pavanmadiraju91.aws-eu-west-1.turso.io"
 
-# Development settings
-[env.dev]
-name = "shout-worker-dev"
-
-[env.dev.vars]
-GITHUB_CLIENT_ID = ""
-GITHUB_CLIENT_SECRET = ""
-TURSO_URL = ""
-TURSO_AUTH_TOKEN = ""
-JWT_SECRET = "dev-secret-change-in-production"
+# Secrets (set via `wrangler secret put`):
+# TURSO_AUTH_TOKEN, JWT_SECRET, GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
