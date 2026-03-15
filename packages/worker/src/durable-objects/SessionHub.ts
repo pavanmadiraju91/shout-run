@@ -2,6 +2,8 @@ import type { Env } from '../env.js';
 import {
   decodeFrame,
   encodeEndFrame,
+  encodeOutputFrame,
+  encodeResizeFrame,
   encodeViewerCountFrame,
   encodeMetaFrame,
   encodePing,
@@ -160,16 +162,51 @@ export class SessionHub implements DurableObject {
     });
     server.send(metaFrame);
 
-    // Send full session history for late joiners (falls back to ring buffer
-    // if the replay cap was reached and allChunks stopped accumulating)
-    if (this.allChunks.length > 0) {
-      for (const chunk of this.allChunks) {
-        server.send(chunk);
+    // Replay session history for late joiners.
+    // Decode stored frames, merge consecutive output text into ≤64 KB batches
+    // to avoid flooding the WebSocket send buffer with hundreds of tiny messages.
+    const replaySource =
+      this.allChunks.length > 0
+        ? this.allChunks
+        : this.buffer.map((b) => b.data);
+
+    if (replaySource.length > 0) {
+      const MAX_TEXT_BATCH = 64 * 1024;
+      const decoder = new TextDecoder();
+      let textBuf = '';
+      let lastTs = 0;
+
+      const flushText = () => {
+        if (textBuf.length === 0) return;
+        server.send(encodeOutputFrame(textBuf, lastTs));
+        textBuf = '';
+      };
+
+      for (const raw of replaySource) {
+        try {
+          const frame = decodeFrame(raw);
+
+          if (frame.type === FrameType.Output) {
+            const text = decoder.decode(frame.payload);
+            lastTs = frame.timestamp;
+
+            if (textBuf.length + text.length > MAX_TEXT_BATCH) {
+              flushText();
+            }
+            textBuf += text;
+          } else if (frame.type === FrameType.Resize) {
+            // Flush pending text before sending a resize
+            flushText();
+            const view = new DataView(frame.payload.buffer, frame.payload.byteOffset, frame.payload.byteLength);
+            server.send(encodeResizeFrame(view.getUint16(0), view.getUint16(2)));
+          }
+          // Skip other frame types (Meta already sent above, Ping/Pong irrelevant)
+        } catch {
+          // Skip corrupt frames
+        }
       }
-    } else {
-      for (const chunk of this.buffer) {
-        server.send(chunk.data);
-      }
+
+      flushText();
     }
 
     // Update and broadcast viewer count
