@@ -133,18 +133,22 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
       cellH = currentFontSize * (xterm.options.lineHeight ?? 1.2);
     }
 
-    // Scale fontSize so cols×rows fits within the available space
-    const maxFontByWidth = (availW / (size.cols * cellW)) * currentFontSize;
-    const maxFontByHeight = (availH / (size.rows * cellH)) * currentFontSize;
-    const newFontSize = Math.max(8, Math.min(Math.floor(Math.min(maxFontByWidth, maxFontByHeight)), 48));
+    // Width-priority sizing (like asciinema-player fit:"width" default):
+    // Size font to fill container width, let excess rows scroll in scrollback.
+    const widthFont = Math.floor((availW / (size.cols * cellW)) * currentFontSize);
+    const newFontSize = Math.max(12, Math.min(widthFont, 48));
 
     if (newFontSize !== xterm.options.fontSize) {
       xterm.options.fontSize = newFontSize;
     }
 
-    // Resize to the broadcaster's dimensions
-    if (xterm.cols !== size.cols || xterm.rows !== size.rows) {
-      xterm.resize(size.cols, size.rows);
+    // Calculate how many rows fit at this font size — excess content scrolls
+    const scaledCellH = (cellH / currentFontSize) * newFontSize;
+    const fittingRows = Math.max(1, Math.floor(availH / scaledCellH));
+    const rows = Math.min(size.rows, fittingRows);
+
+    if (xterm.cols !== size.cols || xterm.rows !== rows) {
+      xterm.resize(size.cols, rows);
     }
   }, []);
 
