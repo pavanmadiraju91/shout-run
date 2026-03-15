@@ -168,14 +168,9 @@ sessionsRouter.get('/:id', optionalAuthMiddleware, async (c) => {
   }
 
   const session = result[0];
-  const currentUser = c.get('user');
 
-  // Check visibility
-  if (session.visibility === 'private' && session.userId !== currentUser?.id) {
-    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
-  }
-
-  // TODO: For 'followers' visibility, check if current user follows the session owner
+  // Private sessions are "unlisted" — not in feeds but accessible via direct link.
+  // No access check needed here; discovery is gated by the live feed and profile endpoints.
 
   const sessionData: Session & { username: string; avatarUrl: string } = {
     id: session.id,
@@ -318,7 +313,7 @@ sessionsRouter.post('/:id/end', authMiddleware, async (c) => {
 });
 
 // GET /api/sessions/:id/replay - Get replay data for an ended session
-sessionsRouter.get('/:id/replay', optionalAuthMiddleware, async (c) => {
+sessionsRouter.get('/:id/replay', async (c) => {
   const sessionId = c.req.param('id')!;
 
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
@@ -330,13 +325,7 @@ sessionsRouter.get('/:id/replay', optionalAuthMiddleware, async (c) => {
     return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
   }
 
-  // Private sessions require auth and ownership
-  if (session.visibility === 'private') {
-    const currentUser = c.get('user');
-    if (!currentUser || currentUser.id !== session.userId) {
-      return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
-    }
-  }
+  // Private sessions are unlisted — accessible via direct link, just not discoverable.
 
   // Ask the Durable Object for its stored chunks
   const doId = c.env.SESSION_HUB.idFromName(sessionId);
