@@ -1,0 +1,39 @@
+name = "shout-worker"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+[durable_objects]
+bindings = [
+  { name = "SESSION_HUB", class_name = "SessionHub" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["SessionHub"]
+
+[[r2_buckets]]
+binding = "SESSIONS_BUCKET"
+bucket_name = "shout-sessions"
+
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "placeholder-kv-id"
+
+[vars]
+GITHUB_CLIENT_ID = ""
+GITHUB_CLIENT_SECRET = ""
+TURSO_URL = ""
+TURSO_AUTH_TOKEN = ""
+JWT_SECRET = ""
+
+# Development settings
+[env.dev]
+name = "shout-worker-dev"
+
+[env.dev.vars]
+GITHUB_CLIENT_ID = ""
+GITHUB_CLIENT_SECRET = ""
+TURSO_URL = ""
+TURSO_AUTH_TOKEN = ""
+JWT_SECRET = "dev-secret-change-in-production"
