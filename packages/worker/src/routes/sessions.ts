@@ -30,6 +30,12 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
   // Strip control characters and clamp length
   title = title.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 256);
 
+  // Sanitize description
+  let description: string | null = null;
+  if (body.description) {
+    description = body.description.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 500) || null;
+  }
+
   let tags: string[] = [];
   if (body.tags) {
     if (!Array.isArray(body.tags) || body.tags.some((t) => typeof t !== 'string')) {
@@ -62,6 +68,7 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
     id: sessionId,
     userId: user.id,
     title,
+    description,
     status: 'live' as const,
     visibility,
     viewerCount: 0,
@@ -85,6 +92,7 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
         userId: user.id,
         username: user.username,
         title: newSession.title,
+        description: description || undefined,
       }),
     }),
   );
@@ -112,6 +120,7 @@ sessionsRouter.get('/live', async (c) => {
       .select({
         id: sessions.id,
         title: sessions.title,
+        description: sessions.description,
         viewerCount: sessions.viewerCount,
         startedAt: sessions.startedAt,
         username: users.username,
@@ -126,6 +135,7 @@ sessionsRouter.get('/live', async (c) => {
     const summaries: SessionSummary[] = liveSessions.map((s) => ({
       id: s.id,
       title: s.title,
+      description: s.description || undefined,
       viewerCount: s.viewerCount,
       startedAt: s.startedAt,
       username: s.username,
@@ -139,6 +149,45 @@ sessionsRouter.get('/live', async (c) => {
   }
 });
 
+// GET /api/sessions/recent - List recently ended sessions
+sessionsRouter.get('/recent', async (c) => {
+  try {
+    const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+
+    const recentSessions = await db
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        description: sessions.description,
+        viewerCount: sessions.viewerCount,
+        startedAt: sessions.startedAt,
+        endedAt: sessions.endedAt,
+        username: users.username,
+        avatarUrl: users.avatarUrl,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(and(eq(sessions.status, 'ended'), eq(sessions.visibility, 'public')))
+      .orderBy(desc(sessions.endedAt))
+      .limit(20);
+
+    const summaries = recentSessions.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description || undefined,
+      viewerCount: s.viewerCount,
+      startedAt: s.startedAt,
+      endedAt: s.endedAt,
+      username: s.username,
+      avatarUrl: s.avatarUrl,
+    }));
+
+    return c.json<ApiResponse>({ ok: true, data: summaries });
+  } catch {
+    return c.json<ApiResponse>({ ok: true, data: [] });
+  }
+});
+
 // GET /api/sessions/:id - Get session details
 sessionsRouter.get('/:id', optionalAuthMiddleware, async (c) => {
   const sessionId = c.req.param('id')!;
@@ -149,6 +198,7 @@ sessionsRouter.get('/:id', optionalAuthMiddleware, async (c) => {
       id: sessions.id,
       userId: sessions.userId,
       title: sessions.title,
+      description: sessions.description,
       status: sessions.status,
       visibility: sessions.visibility,
       viewerCount: sessions.viewerCount,
@@ -176,6 +226,7 @@ sessionsRouter.get('/:id', optionalAuthMiddleware, async (c) => {
     id: session.id,
     userId: session.userId,
     title: session.title,
+    description: session.description || undefined,
     status: session.status as Session['status'],
     visibility: session.visibility as Session['visibility'],
     viewerCount: session.viewerCount,
@@ -207,6 +258,7 @@ sessionsRouter.get('/user/:username', async (c) => {
       id: sessions.id,
       userId: sessions.userId,
       title: sessions.title,
+      description: sessions.description,
       status: sessions.status,
       visibility: sessions.visibility,
       viewerCount: sessions.viewerCount,
@@ -226,6 +278,7 @@ sessionsRouter.get('/user/:username', async (c) => {
     id: s.id,
     userId: s.userId,
     title: s.title,
+    description: s.description || undefined,
     status: s.status as Session['status'],
     visibility: s.visibility as Session['visibility'],
     viewerCount: s.viewerCount,

@@ -24,6 +24,7 @@ interface SessionState {
   userId: string;
   username: string;
   title: string;
+  description?: string;
   startedAt: number;
 }
 

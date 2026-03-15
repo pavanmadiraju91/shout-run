@@ -7,15 +7,20 @@ import type { SessionSummary } from '@shout/shared';
 
 interface SessionCardProps {
   session: SessionSummary;
+  featured?: boolean;
 }
 
-export function SessionCard({ session }: SessionCardProps) {
+export function SessionCard({ session, featured = false }: SessionCardProps) {
   const startedAt = new Date(session.startedAt);
 
   return (
     <Link
       href={`/${session.username}/${session.id}`}
-      className="group block bg-shout-surface border border-shout-border rounded-lg overflow-hidden hover:border-shout-muted transition-all hover:shadow-lg hover:shadow-shout-green/5"
+      className={`group block bg-shout-surface border rounded-lg overflow-hidden transition-all hover:shadow-lg hover:shadow-shout-green/5 ${
+        featured
+          ? 'border-shout-green/30 hover:border-shout-green/50 ring-1 ring-shout-green/10'
+          : 'border-shout-border hover:border-shout-muted'
+      }`}
     >
       {/* Terminal Preview Area */}
       <div className="bg-shout-bg h-32 relative overflow-hidden">
@@ -55,8 +60,15 @@ export function SessionCard({ session }: SessionCardProps) {
           </div>
         </div>
 
+        {/* Description */}
+        {session.description && (
+          <p className="mt-2 text-sm text-shout-text-secondary line-clamp-2">
+            {session.description}
+          </p>
+        )}
+
         {/* Stats row */}
-        <div className="flex items-center gap-4 mt-4 text-sm text-shout-muted">
+        <div className="flex items-center gap-4 mt-3 text-sm text-shout-muted">
           <ViewerCount count={session.viewerCount} />
 
           <div className="flex items-center gap-1.5">

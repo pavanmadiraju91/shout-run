@@ -1,9 +1,44 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import '@xterm/xterm/css/xterm.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  /* Dark theme (default) */
+  --shout-bg: #0d1117;
+  --shout-surface: #161b22;
+  --shout-surface-hover: #1c2129;
+  --shout-border: #30363d;
+  --shout-text: #e6edf3;
+  --shout-text-secondary: #b1bac4;
+  --shout-muted: #8b949e;
+  --shout-accent: #58a6ff;
+  --shout-green: #3fb950;
+  --shout-red: #f85149;
+  --shout-yellow: #d29922;
+  --shout-terminal-bg: #0d1117;
+  --shout-terminal-fg: #e6edf3;
+  --shout-terminal-cursor: #58a6ff;
+}
+
+[data-theme="light"] {
+  --shout-bg: #faf9f7;
+  --shout-surface: #ffffff;
+  --shout-surface-hover: #f3f2f0;
+  --shout-border: #d8d5d0;
+  --shout-text: #1a1a1a;
+  --shout-text-secondary: #4a4a4a;
+  --shout-muted: #7a7a7a;
+  --shout-accent: #0969da;
+  --shout-green: #1a7f37;
+  --shout-red: #cf222e;
+  --shout-yellow: #9a6700;
+  --shout-terminal-bg: #faf9f7;
+  --shout-terminal-fg: #1a1a1a;
+  --shout-terminal-cursor: #0969da;
+}
 
 * {
   box-sizing: border-box;
@@ -13,8 +48,8 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background-color: #0d1117;
-  color: #e6edf3;
+  background-color: var(--shout-bg);
+  color: var(--shout-text);
 }
 
 /* Custom scrollbar styling */
@@ -24,22 +59,22 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: var(--shout-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: var(--shout-border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+  background: var(--shout-muted);
 }
 
 /* Firefox scrollbar */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #30363d #0d1117;
+  scrollbar-color: var(--shout-border) var(--shout-bg);
 }
 
 /* xterm.js overrides */
@@ -52,7 +87,7 @@ body {
 
 .xterm-viewport {
   scrollbar-width: thin;
-  scrollbar-color: #30363d #0d1117;
+  scrollbar-color: var(--shout-border) var(--shout-terminal-bg);
 }
 
 .xterm-viewport::-webkit-scrollbar {
@@ -60,17 +95,21 @@ body {
 }
 
 .xterm-viewport::-webkit-scrollbar-track {
-  background: #0d1117;
+  background: var(--shout-terminal-bg);
 }
 
 .xterm-viewport::-webkit-scrollbar-thumb {
-  background: #30363d;
+  background: var(--shout-border);
   border-radius: 4px;
 }
 
 /* Selection styling for terminal */
 .xterm .xterm-selection div {
   background-color: rgba(88, 166, 255, 0.3);
+}
+
+[data-theme="light"] .xterm .xterm-selection div {
+  background-color: rgba(9, 105, 218, 0.2);
 }
 
 /* Screen-reader-only utility */

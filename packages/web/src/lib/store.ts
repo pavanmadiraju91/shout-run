@@ -1,5 +1,10 @@
 import { create } from 'zustand';
-import { fetchLiveSessions as apiGetLiveSessions, fetchSession as apiGetSession } from './api';
+import {
+  fetchLiveSessions as apiGetLiveSessions,
+  fetchRecentSessions as apiGetRecentSessions,
+  fetchSession as apiGetSession,
+} from './api';
+import type { RecentSession } from './api';
 import type { Session, SessionSummary, User } from '@shout/shared';
 
 interface SessionWithUser extends Session {
@@ -9,12 +14,14 @@ interface SessionWithUser extends Session {
 
 interface StoreState {
   liveSessions: SessionSummary[];
+  recentSessions: RecentSession[];
   currentSession: SessionWithUser | null;
   user: User | null;
   isLoading: boolean;
   error: string | null;
 
   fetchLiveSessions: () => Promise<void>;
+  fetchRecentSessions: () => Promise<void>;
   fetchSession: (id: string) => Promise<SessionWithUser | null>;
   setUser: (user: User | null) => void;
   clearError: () => void;
@@ -22,6 +29,7 @@ interface StoreState {
 
 export const useStore = create<StoreState>((set, get) => ({
   liveSessions: [],
+  recentSessions: [],
   currentSession: null,
   user: null,
   isLoading: false,
@@ -34,6 +42,16 @@ export const useStore = create<StoreState>((set, get) => ({
     } catch (error) {
       console.error('Failed to fetch live sessions:', error);
       set({ error: 'Failed to fetch live sessions' });
+    }
+  },
+
+  fetchRecentSessions: async () => {
+    try {
+      const sessions = await apiGetRecentSessions();
+      set({ recentSessions: sessions });
+    } catch (error) {
+      console.error('Failed to fetch recent sessions:', error);
+      set({ error: 'Failed to fetch recent sessions' });
     }
   },
 

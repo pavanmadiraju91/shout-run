@@ -9,18 +9,21 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'shout-bg': '#0d1117',
-        'shout-surface': '#161b22',
-        'shout-border': '#30363d',
-        'shout-text': '#e6edf3',
-        'shout-muted': '#8b949e',
-        'shout-accent': '#58a6ff',
-        'shout-green': '#3fb950',
-        'shout-red': '#f85149',
+        'shout-bg': 'var(--shout-bg)',
+        'shout-surface': 'var(--shout-surface)',
+        'shout-surface-hover': 'var(--shout-surface-hover)',
+        'shout-border': 'var(--shout-border)',
+        'shout-text': 'var(--shout-text)',
+        'shout-text-secondary': 'var(--shout-text-secondary)',
+        'shout-muted': 'var(--shout-muted)',
+        'shout-accent': 'var(--shout-accent)',
+        'shout-green': 'var(--shout-green)',
+        'shout-red': 'var(--shout-red)',
+        'shout-yellow': 'var(--shout-yellow)',
       },
       fontFamily: {
         mono: ['JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
-        sans: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['IBM Plex Sans', 'system-ui', 'sans-serif'],
       },
       animation: {
         'pulse-live': 'pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',

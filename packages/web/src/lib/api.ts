@@ -7,6 +7,17 @@ interface SessionWithUser extends Session {
   avatarUrl: string;
 }
 
+export interface RecentSession {
+  id: string;
+  title: string;
+  description?: string;
+  viewerCount: number;
+  startedAt: string;
+  endedAt?: string;
+  username: string;
+  avatarUrl: string;
+}
+
 function getAuthHeaders(): HeadersInit {
   if (typeof window === 'undefined') return {};
 
@@ -42,6 +53,16 @@ export async function fetchLiveSessions(): Promise<SessionSummary[]> {
     return response.data || [];
   } catch (error) {
     console.error('Failed to fetch live sessions:', error);
+    return [];
+  }
+}
+
+export async function fetchRecentSessions(): Promise<RecentSession[]> {
+  try {
+    const response = await fetchApi<{ data: RecentSession[] }>('/api/sessions/recent');
+    return response.data || [];
+  } catch (error) {
+    console.error('Failed to fetch recent sessions:', error);
     return [];
   }
 }

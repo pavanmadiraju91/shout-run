@@ -19,6 +19,7 @@ export const sessions = sqliteTable('sessions', {
     .notNull()
     .references(() => users.id),
   title: text('title').notNull(),
+  description: text('description'),
   status: text('status').notNull(), // 'live' | 'ended'
   visibility: text('visibility').notNull(), // 'public' | 'followers' | 'private'
   viewerCount: integer('viewer_count').notNull().default(0),

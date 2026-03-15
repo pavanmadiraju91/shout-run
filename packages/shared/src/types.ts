@@ -15,6 +15,7 @@ export interface Session {
   id: string;
   userId: string;
   title: string;
+  description?: string;
   status: SessionStatus;
   visibility: SessionVisibility;
   viewerCount: number;
@@ -28,6 +29,7 @@ export interface SessionSummary {
   username: string;
   avatarUrl: string;
   title: string;
+  description?: string;
   viewerCount: number;
   startedAt: string;
 }
@@ -62,6 +64,7 @@ export interface ApiResponse<T = unknown> {
 
 export interface CreateSessionRequest {
   title?: string;
+  description?: string;
   visibility?: SessionVisibility;
   tags?: string[];
 }

@@ -4,9 +4,10 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { createSocket, type SocketCallbacks } from '@/lib/socket';
+import { useTheme } from '@/components/ThemeProvider';
 
 // GitHub Dark color palette
-const GITHUB_DARK_THEME = {
+const DARK_THEME = {
   background: '#0d1117',
   foreground: '#e6edf3',
   cursor: '#58a6ff',
@@ -31,6 +32,32 @@ const GITHUB_DARK_THEME = {
   brightWhite: '#f0f6fc',
 };
 
+// Cream/paper light theme (Solarized Light inspired)
+const LIGHT_THEME = {
+  background: '#faf9f7',
+  foreground: '#1a1a1a',
+  cursor: '#0969da',
+  cursorAccent: '#faf9f7',
+  selectionBackground: 'rgba(9, 105, 218, 0.2)',
+  selectionForeground: '#1a1a1a',
+  black: '#1a1a1a',
+  red: '#cf222e',
+  green: '#1a7f37',
+  yellow: '#9a6700',
+  blue: '#0969da',
+  magenta: '#8250df',
+  cyan: '#1b7c83',
+  white: '#6e7781',
+  brightBlack: '#57606a',
+  brightRed: '#a40e26',
+  brightGreen: '#116329',
+  brightYellow: '#7d4e00',
+  brightBlue: '#0550ae',
+  brightMagenta: '#6639ba',
+  brightCyan: '#136c72',
+  brightWhite: '#8c959f',
+};
+
 interface TerminalProps {
   sessionId: string;
   isLive: boolean;
@@ -43,6 +70,13 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
   const xtermRef = useRef<XTerm | null>(null);
   const socketRef = useRef<ReturnType<typeof createSocket> | null>(null);
   const announceRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
+
+  // Swap xterm theme when the global theme changes
+  useEffect(() => {
+    if (!xtermRef.current) return;
+    xtermRef.current.options.theme = theme === 'light' ? LIGHT_THEME : DARK_THEME;
+  }, [theme]);
 
   const handleOutput = useCallback((data: string) => {
     xtermRef.current?.write(data);
@@ -101,9 +135,11 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
   useEffect(() => {
     if (!terminalRef.current) return;
 
+    const initialTheme = theme === 'light' ? LIGHT_THEME : DARK_THEME;
+
     // Initialize xterm.js with fixed dimensions (broadcaster will send real size via Resize frame)
     const xterm = new XTerm({
-      theme: GITHUB_DARK_THEME,
+      theme: initialTheme,
       fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, monospace',
       fontSize: 14,
       lineHeight: 1.2,
@@ -154,7 +190,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
       socketRef.current?.disconnect();
       xterm.dispose();
     };
-  }, [sessionId, isLive, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, scaleTerminal]);
+  }, [sessionId, isLive, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, scaleTerminal, theme]);
 
   const ariaLabel = sessionTitle ? `Terminal session: ${sessionTitle}` : 'Terminal session';
 
