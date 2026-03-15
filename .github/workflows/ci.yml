@@ -20,8 +20,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -32,8 +30,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build shared package
+        run: pnpm --filter @shout/shared run build
+
       - name: Run ESLint
-        run: pnpm lint
+        run: pnpm --filter @shout/web run lint
 
   typecheck:
     name: Type Check
@@ -44,8 +45,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -56,8 +55,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run type checking
-        run: pnpm typecheck
+      - name: Build shared package
+        run: pnpm --filter @shout/shared run build
+
+      - name: Typecheck CLI
+        run: pnpm --filter @shout/cli run typecheck
+
+      - name: Typecheck Worker
+        run: pnpm --filter @shout/worker run typecheck
 
   build:
     name: Build
@@ -68,8 +73,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -80,14 +83,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build all packages
-        run: pnpm build
+      - name: Build shared
+        run: pnpm --filter @shout/shared run build
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            packages/*/dist
-            packages/web/.next
-          retention-days: 7
+      - name: Build CLI
+        run: pnpm --filter @shout/cli run build
+
+      - name: Build Web
+        run: pnpm --filter @shout/web run build

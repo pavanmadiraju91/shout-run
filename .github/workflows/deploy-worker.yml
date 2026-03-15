@@ -1,6 +1,7 @@
 name: Deploy Worker
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
     paths:
@@ -16,6 +17,7 @@ jobs:
   deploy:
     name: Deploy to Cloudflare Workers
     runs-on: ubuntu-latest
+    if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
     environment: production
     steps:
       - name: Checkout repository
@@ -23,8 +25,6 @@ jobs:
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
