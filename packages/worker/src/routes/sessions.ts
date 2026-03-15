@@ -70,33 +70,38 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
 
 // GET /api/sessions/live - List all live sessions
 sessionsRouter.get('/live', async (c) => {
-  const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+  try {
+    const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
 
-  const liveSessions = await db
-    .select({
-      id: sessions.id,
-      title: sessions.title,
-      viewerCount: sessions.viewerCount,
-      startedAt: sessions.startedAt,
-      username: users.username,
-      avatarUrl: users.avatarUrl,
-    })
-    .from(sessions)
-    .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.status, 'live'), eq(sessions.visibility, 'public')))
-    .orderBy(desc(sessions.viewerCount))
-    .limit(50);
+    const liveSessions = await db
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        viewerCount: sessions.viewerCount,
+        startedAt: sessions.startedAt,
+        username: users.username,
+        avatarUrl: users.avatarUrl,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(and(eq(sessions.status, 'live'), eq(sessions.visibility, 'public')))
+      .orderBy(desc(sessions.viewerCount))
+      .limit(50);
 
-  const summaries: SessionSummary[] = liveSessions.map((s) => ({
-    id: s.id,
-    title: s.title,
-    viewerCount: s.viewerCount,
-    startedAt: s.startedAt,
-    username: s.username,
-    avatarUrl: s.avatarUrl,
-  }));
+    const summaries: SessionSummary[] = liveSessions.map((s) => ({
+      id: s.id,
+      title: s.title,
+      viewerCount: s.viewerCount,
+      startedAt: s.startedAt,
+      username: s.username,
+      avatarUrl: s.avatarUrl,
+    }));
 
-  return c.json<ApiResponse<SessionSummary[]>>({ ok: true, data: summaries });
+    return c.json<ApiResponse<SessionSummary[]>>({ ok: true, data: summaries });
+  } catch {
+    // DB not configured — return empty list for local dev
+    return c.json<ApiResponse<SessionSummary[]>>({ ok: true, data: [] });
+  }
 });
 
 // GET /api/sessions/:id - Get session details
