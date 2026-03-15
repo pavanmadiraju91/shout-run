@@ -4,8 +4,8 @@
   <p>Broadcast your terminal to the world. Live.</p>
   <p>
     <a href="https://www.npmjs.com/package/@shout/cli"><img src="https://img.shields.io/npm/v/@shout/cli" alt="npm version" /></a>
-    <a href="https://github.com/your-username/shout/actions/workflows/ci.yml"><img src="https://github.com/your-username/shout/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <a href="https://github.com/your-username/shout/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
+    <a href="https://github.com/pavanmadiraju91/ideal-robot/actions/workflows/ci.yml"><img src="https://github.com/pavanmadiraju91/ideal-robot/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/pavanmadiraju91/ideal-robot/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
   </p>
 </div>
 
@@ -39,7 +39,7 @@ echo "hello world" | shout
 npm run build | shout
 ```
 
-Your terminal output is now live at `https://shout.dev/your-username`.
+Your terminal output is now live at `https://shout.dev/pavanmadiraju91`.
 
 ## How It Works
 
@@ -130,8 +130,8 @@ shout can be self-hosted entirely on Cloudflare's free tier:
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/shout.git
-   cd shout
+   git clone https://github.com/pavanmadiraju91/ideal-robot.git
+   cd ideal-robot
    ```
 
 2. **Set up Turso database**
@@ -163,7 +163,7 @@ shout can be self-hosted entirely on Cloudflare's free tier:
 Show your current broadcast status:
 
 ```markdown
-[![shout](https://shout.dev/badge/your-username)](https://shout.dev/your-username)
+[![shout](https://shout.dev/badge/pavanmadiraju91)](https://shout.dev/pavanmadiraju91)
 ```
 
 When you're live, viewers see a pulsing "LIVE" badge. When offline, it shows your last broadcast time.
@@ -194,8 +194,8 @@ Options:
 
 ```bash
 # Clone and install
-git clone https://github.com/your-username/shout.git
-cd shout
+git clone https://github.com/pavanmadiraju91/ideal-robot.git
+cd ideal-robot
 pnpm install
 
 # Start development servers
@@ -251,7 +251,7 @@ MIT License - see [LICENSE](LICENSE) for details.
   <p>Built with Cloudflare Workers, Turso, and Next.js</p>
   <p>
     <a href="https://shout.dev">Website</a> ·
-    <a href="https://github.com/your-username/shout/issues">Issues</a> ·
+    <a href="https://github.com/pavanmadiraju91/ideal-robot/issues">Issues</a> ·
     <a href="https://twitter.com/shoutdev">Twitter</a>
   </p>
 </div>

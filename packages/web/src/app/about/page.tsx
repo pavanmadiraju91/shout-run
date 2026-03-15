@@ -117,7 +117,7 @@ export default function AboutPage() {
         <div className="mt-12 pt-8 border-t border-shout-border">
           <p className="text-sm">
             Questions or feedback?{' '}
-            <Link href="https://github.com/shout-dev/shout" className="text-shout-accent hover:underline">
+            <Link href="https://github.com/pavanmadiraju91/ideal-robot" className="text-shout-accent hover:underline">
               Open an issue on GitHub
             </Link>
           </p>

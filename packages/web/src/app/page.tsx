@@ -33,7 +33,7 @@ export default function HomePage() {
               <span className="text-shout-text">npm install -g shout-cli</span>
             </div>
             <Link
-              href="https://github.com/shout-dev/shout"
+              href="https://github.com/pavanmadiraju91/ideal-robot"
               target="_blank"
               className="text-shout-accent hover:underline text-sm"
             >
