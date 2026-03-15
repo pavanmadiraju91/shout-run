@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { useStore } from '@/lib/store';
 
 type Theme = 'dark' | 'light';
 
@@ -22,7 +21,6 @@ export function useTheme() {
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>('dark');
   const [mounted, setMounted] = useState(false);
-  const { hydrateUser } = useStore();
 
   useEffect(() => {
     const stored = localStorage.getItem('shout-theme') as Theme | null;
@@ -32,10 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       setTheme('light');
     }
     setMounted(true);
-
-    // Restore user session from token
-    hydrateUser();
-  }, [hydrateUser]);
+  }, []);
 
   useEffect(() => {
     if (!mounted) return;

@@ -3,37 +3,49 @@ import {
   fetchLiveSessions as apiGetLiveSessions,
   fetchRecentSessions as apiGetRecentSessions,
   fetchSession as apiGetSession,
-  fetchCurrentUser as apiGetCurrentUser,
 } from './api';
 import type { RecentSession } from './api';
-import type { Session, SessionSummary, User } from '@shout/shared';
+import type { Session, SessionSummary } from '@shout/shared';
 
 interface SessionWithUser extends Session {
   username: string;
   avatarUrl: string;
 }
 
+export interface FeedItem {
+  id: string;
+  username: string;
+  avatarUrl: string;
+  title: string;
+  description?: string;
+  viewerCount: number;
+  upvotes: number;
+  startedAt: string;
+  endedAt?: string;
+  isLive: boolean;
+}
+
 interface StoreState {
   liveSessions: SessionSummary[];
   recentSessions: RecentSession[];
+  feedItems: FeedItem[];
   currentSession: SessionWithUser | null;
-  user: User | null;
   isLoading: boolean;
   error: string | null;
 
   fetchLiveSessions: () => Promise<void>;
   fetchRecentSessions: () => Promise<void>;
+  fetchFeed: () => Promise<void>;
   fetchSession: (id: string) => Promise<SessionWithUser | null>;
-  hydrateUser: () => Promise<void>;
-  setUser: (user: User | null) => void;
+  updateUpvotes: (sessionId: string, count: number) => void;
   clearError: () => void;
 }
 
 export const useStore = create<StoreState>((set, get) => ({
   liveSessions: [],
   recentSessions: [],
+  feedItems: [],
   currentSession: null,
-  user: null,
   isLoading: false,
   error: null,
 
@@ -57,10 +69,49 @@ export const useStore = create<StoreState>((set, get) => ({
     }
   },
 
+  fetchFeed: async () => {
+    try {
+      const [live, recent] = await Promise.all([apiGetLiveSessions(), apiGetRecentSessions()]);
+
+      const liveItems: FeedItem[] = live.map((s) => ({
+        id: s.id,
+        username: s.username,
+        avatarUrl: s.avatarUrl,
+        title: s.title,
+        description: s.description,
+        viewerCount: s.viewerCount,
+        upvotes: s.upvotes,
+        startedAt: s.startedAt,
+        isLive: true,
+      }));
+
+      const recentItems: FeedItem[] = recent.map((s) => ({
+        id: s.id,
+        username: s.username,
+        avatarUrl: s.avatarUrl,
+        title: s.title,
+        description: s.description,
+        viewerCount: s.viewerCount,
+        upvotes: s.upvotes,
+        startedAt: s.startedAt,
+        endedAt: s.endedAt,
+        isLive: false,
+      }));
+
+      set({
+        liveSessions: live,
+        recentSessions: recent,
+        feedItems: [...liveItems, ...recentItems],
+      });
+    } catch (error) {
+      console.error('Failed to fetch feed:', error);
+      set({ error: 'Failed to fetch feed' });
+    }
+  },
+
   fetchSession: async (id: string) => {
     const { currentSession } = get();
 
-    // Return cached if same session
     if (currentSession?.id === id) {
       return currentSession;
     }
@@ -78,23 +129,12 @@ export const useStore = create<StoreState>((set, get) => ({
     }
   },
 
-  hydrateUser: async () => {
-    const data = await apiGetCurrentUser();
-    if (data) {
-      set({
-        user: {
-          id: data.id,
-          githubId: 0,
-          username: data.username,
-          avatarUrl: data.avatarUrl,
-          createdAt: '',
-        },
-      });
-    }
-  },
-
-  setUser: (user) => {
-    set({ user });
+  updateUpvotes: (sessionId: string, count: number) => {
+    set((state) => ({
+      feedItems: state.feedItems.map((item) =>
+        item.id === sessionId ? { ...item, upvotes: count } : item,
+      ),
+    }));
   },
 
   clearError: () => {

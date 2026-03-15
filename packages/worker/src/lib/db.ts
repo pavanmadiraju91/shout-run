@@ -24,6 +24,7 @@ export const sessions = sqliteTable('sessions', {
   visibility: text('visibility').notNull(), // 'public' | 'followers' | 'private'
   viewerCount: integer('viewer_count').notNull().default(0),
   tags: text('tags'), // JSON array string
+  upvotes: integer('upvotes').notNull().default(0),
   startedAt: text('started_at').notNull(),
   endedAt: text('ended_at'),
 });

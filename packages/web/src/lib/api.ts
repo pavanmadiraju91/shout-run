@@ -12,21 +12,11 @@ export interface RecentSession {
   title: string;
   description?: string;
   viewerCount: number;
+  upvotes: number;
   startedAt: string;
   endedAt?: string;
   username: string;
   avatarUrl: string;
-}
-
-function getAuthHeaders(): HeadersInit {
-  if (typeof window === 'undefined') return {};
-
-  const token = localStorage.getItem('shout_token');
-  if (!token) return {};
-
-  return {
-    Authorization: `Bearer ${token}`,
-  };
 }
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
@@ -34,7 +24,6 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      ...getAuthHeaders(),
       ...options?.headers,
     },
   });
@@ -84,11 +73,44 @@ export async function fetchUserSessions(username: string): Promise<SessionWithUs
   }
 }
 
-export async function fetchCurrentUser(): Promise<{ id: string; username: string; avatarUrl: string } | null> {
+// ── Anonymous Voter Identity ─────────────────────────────────
+
+const VOTER_ID_KEY = 'shout_voter_id';
+const VOTED_PREFIX = 'shout_voted_';
+
+export function getVoterId(): string {
+  if (typeof window === 'undefined') return '';
+
+  let id = localStorage.getItem(VOTER_ID_KEY);
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem(VOTER_ID_KEY, id);
+  }
+  return id;
+}
+
+export function hasVoted(sessionId: string): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(`${VOTED_PREFIX}${sessionId}`) === '1';
+}
+
+export function markVoted(sessionId: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(`${VOTED_PREFIX}${sessionId}`, '1');
+}
+
+export async function upvoteSession(
+  sessionId: string,
+  voterId: string,
+): Promise<{ upvotes: number } | null> {
   try {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('shout_token') : null;
-    if (!token) return null;
-    const response = await fetchApi<{ data: { id: string; username: string; avatarUrl: string } }>('/api/auth/me');
+    const response = await fetchApi<{ data: { upvotes: number } }>(
+      `/api/sessions/${sessionId}/upvote`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ voterId }),
+      },
+    );
     return response.data;
   } catch {
     return null;

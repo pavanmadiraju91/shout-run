@@ -72,6 +72,7 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
     status: 'live' as const,
     visibility,
     viewerCount: 0,
+    upvotes: 0,
     tags: tags.length > 0 ? JSON.stringify(tags) : null,
     startedAt: now,
     endedAt: null,
@@ -122,6 +123,7 @@ sessionsRouter.get('/live', async (c) => {
         title: sessions.title,
         description: sessions.description,
         viewerCount: sessions.viewerCount,
+        upvotes: sessions.upvotes,
         startedAt: sessions.startedAt,
         username: users.username,
         avatarUrl: users.avatarUrl,
@@ -129,7 +131,7 @@ sessionsRouter.get('/live', async (c) => {
       .from(sessions)
       .innerJoin(users, eq(sessions.userId, users.id))
       .where(and(eq(sessions.status, 'live'), eq(sessions.visibility, 'public')))
-      .orderBy(desc(sessions.viewerCount))
+      .orderBy(desc(sessions.upvotes), desc(sessions.viewerCount))
       .limit(50);
 
     const summaries: SessionSummary[] = liveSessions.map((s) => ({
@@ -137,6 +139,7 @@ sessionsRouter.get('/live', async (c) => {
       title: s.title,
       description: s.description || undefined,
       viewerCount: s.viewerCount,
+      upvotes: s.upvotes,
       startedAt: s.startedAt,
       username: s.username,
       avatarUrl: s.avatarUrl,
@@ -160,6 +163,7 @@ sessionsRouter.get('/recent', async (c) => {
         title: sessions.title,
         description: sessions.description,
         viewerCount: sessions.viewerCount,
+        upvotes: sessions.upvotes,
         startedAt: sessions.startedAt,
         endedAt: sessions.endedAt,
         username: users.username,
@@ -168,7 +172,7 @@ sessionsRouter.get('/recent', async (c) => {
       .from(sessions)
       .innerJoin(users, eq(sessions.userId, users.id))
       .where(and(eq(sessions.status, 'ended'), eq(sessions.visibility, 'public')))
-      .orderBy(desc(sessions.endedAt))
+      .orderBy(desc(sessions.upvotes), desc(sessions.endedAt))
       .limit(20);
 
     const summaries = recentSessions.map((s) => ({
@@ -176,6 +180,7 @@ sessionsRouter.get('/recent', async (c) => {
       title: s.title,
       description: s.description || undefined,
       viewerCount: s.viewerCount,
+      upvotes: s.upvotes,
       startedAt: s.startedAt,
       endedAt: s.endedAt,
       username: s.username,
@@ -186,6 +191,48 @@ sessionsRouter.get('/recent', async (c) => {
   } catch {
     return c.json<ApiResponse>({ ok: true, data: [] });
   }
+});
+
+// POST /api/sessions/:id/upvote - Upvote a session (anonymous, deduped by voterId)
+sessionsRouter.post('/:id/upvote', async (c) => {
+  const sessionId = c.req.param('id')!;
+  const body = await c.req.json<{ voterId: string }>().catch(() => ({ voterId: '' }));
+
+  if (!body.voterId || body.voterId.length > 64) {
+    return c.json<ApiResponse>({ ok: false, error: 'Invalid voterId' }, 400);
+  }
+
+  const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+
+  // Check session exists
+  const session = await db.query.sessions.findFirst({
+    where: eq(sessions.id, sessionId),
+  });
+
+  if (!session) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Dedup via KV — key: vote:{sessionId}:{voterId}, 30-day TTL
+  const kvKey = `vote:${sessionId}:${body.voterId}`;
+  const existing = await c.env.RATE_LIMITS.get(kvKey);
+
+  if (existing) {
+    return c.json<ApiResponse>({ ok: false, error: 'Already voted' }, 409);
+  }
+
+  // Record vote in KV with 30-day TTL
+  await c.env.RATE_LIMITS.put(kvKey, '1', { expirationTtl: 30 * 24 * 60 * 60 });
+
+  // Increment upvotes
+  await db
+    .update(sessions)
+    .set({ upvotes: sql`${sessions.upvotes} + 1` })
+    .where(eq(sessions.id, sessionId));
+
+  const newCount = (session.upvotes ?? 0) + 1;
+
+  return c.json<ApiResponse<{ upvotes: number }>>({ ok: true, data: { upvotes: newCount } });
 });
 
 // GET /api/sessions/:id - Get session details

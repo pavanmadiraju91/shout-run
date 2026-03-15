@@ -31,6 +31,7 @@ export interface SessionSummary {
   title: string;
   description?: string;
   viewerCount: number;
+  upvotes: number;
   startedAt: string;
 }
 
