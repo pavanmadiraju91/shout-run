@@ -45,6 +45,9 @@ body {
 /* xterm.js overrides */
 .xterm {
   padding: 12px;
+  position: absolute;
+  top: 0;
+  left: 0;
 }
 
 .xterm-viewport {
@@ -68,4 +71,17 @@ body {
 /* Selection styling for terminal */
 .xterm .xterm-selection div {
   background-color: rgba(88, 166, 255, 0.3);
+}
+
+/* Screen-reader-only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

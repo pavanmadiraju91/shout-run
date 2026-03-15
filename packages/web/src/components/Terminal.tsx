@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { createSocket, type SocketCallbacks } from '@/lib/socket';
 
@@ -35,22 +34,48 @@ const GITHUB_DARK_THEME = {
 interface TerminalProps {
   sessionId: string;
   isLive: boolean;
+  sessionTitle?: string;
   onViewerCountChange?: (count: number) => void;
 }
 
-export function Terminal({ sessionId, isLive, onViewerCountChange }: TerminalProps) {
+export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<ReturnType<typeof createSocket> | null>(null);
+  const announceRef = useRef<HTMLDivElement>(null);
 
   const handleOutput = useCallback((data: string) => {
     xtermRef.current?.write(data);
   }, []);
 
-  const handleResize = useCallback((cols: number, rows: number) => {
-    xtermRef.current?.resize(cols, rows);
+  const scaleTerminal = useCallback(() => {
+    const container = terminalRef.current;
+    if (!container) return;
+    const xtermScreen = container.querySelector('.xterm-screen') as HTMLElement | null;
+    if (!xtermScreen) return;
+
+    // Temporarily remove scale to measure natural size
+    xtermScreen.style.transform = '';
+    const naturalW = xtermScreen.offsetWidth;
+    const naturalH = xtermScreen.offsetHeight;
+    const containerW = container.clientWidth;
+    const containerH = container.clientHeight;
+
+    if (naturalW === 0 || naturalH === 0) return;
+
+    const scale = Math.min(containerW / naturalW, containerH / naturalH, 1);
+    xtermScreen.style.transform = `scale(${scale})`;
+    xtermScreen.style.transformOrigin = 'top left';
   }, []);
+
+  const handleResize = useCallback(
+    (cols: number, rows: number) => {
+      xtermRef.current?.resize(cols, rows);
+      // Re-scale after the terminal's natural size changes
+      requestAnimationFrame(scaleTerminal);
+    },
+    [scaleTerminal]
+  );
 
   const handleViewerCount = useCallback(
     (count: number) => {
@@ -61,16 +86,22 @@ export function Terminal({ sessionId, isLive, onViewerCountChange }: TerminalPro
 
   const handleEnd = useCallback(() => {
     xtermRef.current?.write('\r\n\x1b[90m--- Session ended ---\x1b[0m\r\n');
+    if (announceRef.current) {
+      announceRef.current.textContent = 'Session ended';
+    }
   }, []);
 
   const handleError = useCallback((error: string) => {
     xtermRef.current?.write(`\r\n\x1b[31mError: ${error}\x1b[0m\r\n`);
+    if (announceRef.current) {
+      announceRef.current.textContent = `Error: ${error}`;
+    }
   }, []);
 
   useEffect(() => {
     if (!terminalRef.current) return;
 
-    // Initialize xterm.js
+    // Initialize xterm.js with fixed dimensions (broadcaster will send real size via Resize frame)
     const xterm = new XTerm({
       theme: GITHUB_DARK_THEME,
       fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, monospace',
@@ -81,25 +112,25 @@ export function Terminal({ sessionId, isLive, onViewerCountChange }: TerminalPro
       allowTransparency: true,
       scrollback: 5000,
       convertEol: true,
+      cols: 80,
+      rows: 24,
+      screenReaderMode: true,
     });
 
-    const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
-
-    xterm.loadAddon(fitAddon);
     xterm.loadAddon(webLinksAddon);
 
     xterm.open(terminalRef.current);
-    fitAddon.fit();
-
     xtermRef.current = xterm;
-    fitAddonRef.current = fitAddon;
 
-    // Handle window resize
-    const handleWindowResize = () => {
-      fitAddon.fit();
-    };
-    window.addEventListener('resize', handleWindowResize);
+    // Initial scale after xterm renders
+    requestAnimationFrame(scaleTerminal);
+
+    // Re-scale whenever the container size changes
+    const resizeObserver = new ResizeObserver(() => {
+      scaleTerminal();
+    });
+    resizeObserver.observe(terminalRef.current);
 
     // Connect to WebSocket if live
     if (isLive) {
@@ -119,18 +150,24 @@ export function Terminal({ sessionId, isLive, onViewerCountChange }: TerminalPro
     }
 
     return () => {
-      window.removeEventListener('resize', handleWindowResize);
+      resizeObserver.disconnect();
       socketRef.current?.disconnect();
       xterm.dispose();
     };
-  }, [sessionId, isLive, handleOutput, handleViewerCount, handleResize, handleEnd, handleError]);
+  }, [sessionId, isLive, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, scaleTerminal]);
+
+  const ariaLabel = sessionTitle ? `Terminal session: ${sessionTitle}` : 'Terminal session';
 
   return (
     <div
-      ref={terminalRef}
-      className="flex-1 bg-shout-bg overflow-hidden"
+      role="region"
+      aria-label={ariaLabel}
+      className="flex-1 relative bg-shout-bg overflow-hidden"
       style={{ minHeight: 0 }}
-    />
+    >
+      <div ref={terminalRef} className="absolute inset-0" />
+      <div ref={announceRef} className="sr-only" aria-live="polite" />
+    </div>
   );
 }
 
@@ -159,7 +196,11 @@ async function fetchReplayData(sessionId: string, xterm: XTerm) {
       if (delay > 0 && delay < 5000) {
         await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 100)));
       }
-      xterm.write(chunk.data);
+      if (chunk.type === 'resize' && chunk.cols && chunk.rows) {
+        xterm.resize(chunk.cols, chunk.rows);
+      } else if (chunk.data) {
+        xterm.write(chunk.data);
+      }
       lastTimestamp = chunk.timestamp;
     }
 

@@ -343,6 +343,41 @@ sessionsRouter.get('/:id/replay', async (c) => {
   return c.json<ApiResponse>({ ok: true, data: replayData });
 });
 
+// GET /api/sessions/:id/export - Export session as asciicast v2 (.cast)
+sessionsRouter.get('/:id/export', async (c) => {
+  const sessionId = c.req.param('id')!;
+
+  const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+  const session = await db.query.sessions.findFirst({
+    where: eq(sessions.id, sessionId),
+  });
+
+  if (!session) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Forward to Durable Object
+  const doId = c.env.SESSION_HUB.idFromName(sessionId);
+  const doStub = c.env.SESSION_HUB.get(doId);
+
+  const exportResponse = await doStub.fetch(
+    new Request('https://internal/export', { method: 'GET' }),
+  );
+
+  if (!exportResponse.ok) {
+    const text = await exportResponse.text();
+    return c.json<ApiResponse>({ ok: false, error: text || 'Export failed' }, exportResponse.status as 404);
+  }
+
+  // Return the asciicast response with download headers
+  return new Response(exportResponse.body, {
+    headers: {
+      'Content-Type': exportResponse.headers.get('Content-Type') || 'application/x-asciicast',
+      'Content-Disposition': exportResponse.headers.get('Content-Disposition') || `attachment; filename="${sessionId}.cast"`,
+    },
+  });
+});
+
 // WebSocket upgrade for viewer
 sessionsRouter.get('/:id/ws/viewer', async (c) => {
   const sessionId = c.req.param('id')!;

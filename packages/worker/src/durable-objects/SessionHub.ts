@@ -97,6 +97,11 @@ export class SessionHub implements DurableObject {
       return await this.handleReplay();
     }
 
+    // Asciicast v2 export
+    if (path === '/export' && request.method === 'GET') {
+      return await this.handleExport();
+    }
+
     // Handle WebSocket upgrades
     if (path === '/broadcaster') {
       return this.handleBroadcasterUpgrade(request);
@@ -439,13 +444,26 @@ export class SessionHub implements DurableObject {
   private async persistReplayToStorage(): Promise<void> {
     if (this.allChunks.length === 0) return;
 
-    const chunks: Array<{ data: string; timestamp: number }> = [];
+    const chunks: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
     for (const raw of this.allChunks) {
       try {
         const frame = decodeFrame(raw);
         if (frame.type === FrameType.Output) {
           const text = new TextDecoder().decode(frame.payload);
-          chunks.push({ data: text, timestamp: frame.timestamp * 1000 });
+          chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+        } else if (frame.type === FrameType.Resize) {
+          const view = new DataView(
+            frame.payload.buffer,
+            frame.payload.byteOffset,
+            frame.payload.byteLength,
+          );
+          chunks.push({
+            type: 'resize',
+            data: '',
+            timestamp: frame.timestamp * 1000,
+            cols: view.getUint16(0),
+            rows: view.getUint16(2),
+          });
         }
       } catch {
         // Skip corrupt frames
@@ -458,13 +476,26 @@ export class SessionHub implements DurableObject {
   private async handleReplay(): Promise<Response> {
     // Try in-memory first (session still alive)
     if (this.allChunks.length > 0) {
-      const chunks: Array<{ data: string; timestamp: number }> = [];
+      const chunks: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
       for (const raw of this.allChunks) {
         try {
           const frame = decodeFrame(raw);
           if (frame.type === FrameType.Output) {
             const text = new TextDecoder().decode(frame.payload);
-            chunks.push({ data: text, timestamp: frame.timestamp * 1000 });
+            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+          } else if (frame.type === FrameType.Resize) {
+            const view = new DataView(
+              frame.payload.buffer,
+              frame.payload.byteOffset,
+              frame.payload.byteLength,
+            );
+            chunks.push({
+              type: 'resize',
+              data: '',
+              timestamp: frame.timestamp * 1000,
+              cols: view.getUint16(0),
+              rows: view.getUint16(2),
+            });
           }
         } catch {
           // Skip corrupt frames
@@ -476,11 +507,101 @@ export class SessionHub implements DurableObject {
     }
 
     // Fall back to DO storage (after eviction/restart)
-    const stored = await this.state.storage.get<Array<{ data: string; timestamp: number }>>('replayChunks');
+    const stored = await this.state.storage.get<Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }>>('replayChunks');
     const chunks = stored ?? [];
 
     return new Response(JSON.stringify({ chunks }), {
       headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  private async handleExport(): Promise<Response> {
+    // Load session state
+    if (!this.sessionState) {
+      const stored = await this.state.storage.get<SessionState>('sessionState');
+      if (!stored) {
+        return new Response('Session not found', { status: 404 });
+      }
+      this.sessionState = stored;
+    }
+
+    // Get chunks — prefer in-memory, fall back to DO storage
+    type ReplayChunk = { type?: string; data: string; timestamp: number; cols?: number; rows?: number };
+    let chunks: ReplayChunk[];
+
+    if (this.allChunks.length > 0) {
+      chunks = [];
+      for (const raw of this.allChunks) {
+        try {
+          const frame = decodeFrame(raw);
+          if (frame.type === FrameType.Output) {
+            const text = new TextDecoder().decode(frame.payload);
+            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp * 1000 });
+          } else if (frame.type === FrameType.Resize) {
+            const view = new DataView(
+              frame.payload.buffer,
+              frame.payload.byteOffset,
+              frame.payload.byteLength,
+            );
+            chunks.push({
+              type: 'resize',
+              data: '',
+              timestamp: frame.timestamp * 1000,
+              cols: view.getUint16(0),
+              rows: view.getUint16(2),
+            });
+          }
+        } catch {
+          // Skip corrupt frames
+        }
+      }
+    } else {
+      const stored = await this.state.storage.get<ReplayChunk[]>('replayChunks');
+      chunks = stored ?? [];
+    }
+
+    if (chunks.length === 0) {
+      return new Response('No replay data available', { status: 404 });
+    }
+
+    // Extract initial terminal dimensions from first Resize frame (default 80x24)
+    let cols = 80;
+    let rows = 24;
+    for (const chunk of chunks) {
+      if (chunk.type === 'resize' && chunk.cols && chunk.rows) {
+        cols = chunk.cols;
+        rows = chunk.rows;
+        break;
+      }
+    }
+
+    // Build asciicast v2 header
+    const header = JSON.stringify({
+      version: 2,
+      width: cols,
+      height: rows,
+      timestamp: Math.floor(this.sessionState.startedAt / 1000),
+      title: this.sessionState.title,
+    });
+
+    // Build event lines from output chunks
+    // Timestamps in chunks are ms; asciicast uses seconds with decimal precision
+    const firstTimestamp = chunks[0].timestamp;
+    const lines: string[] = [header];
+
+    for (const chunk of chunks) {
+      if (chunk.type === 'output' || !chunk.type) {
+        const elapsed = (chunk.timestamp - firstTimestamp) / 1000;
+        lines.push(JSON.stringify([parseFloat(elapsed.toFixed(6)), 'o', chunk.data]));
+      }
+    }
+
+    const filename = `${this.sessionState.sessionId}.cast`;
+    return new Response(lines.join('\n') + '\n', {
+      headers: {
+        'Content-Type': 'application/x-asciicast',
+        'Content-Disposition': `attachment; filename="${filename}"`,
+      },
     });
   }
 
