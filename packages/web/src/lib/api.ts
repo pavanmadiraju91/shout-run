@@ -84,9 +84,11 @@ export async function fetchUserSessions(username: string): Promise<SessionWithUs
   }
 }
 
-export async function fetchCurrentUser(): Promise<Session | null> {
+export async function fetchCurrentUser(): Promise<{ id: string; username: string; avatarUrl: string } | null> {
   try {
-    const response = await fetchApi<{ data: Session }>('/api/auth/me');
+    const token = typeof window !== 'undefined' ? localStorage.getItem('shout_token') : null;
+    if (!token) return null;
+    const response = await fetchApi<{ data: { id: string; username: string; avatarUrl: string } }>('/api/auth/me');
     return response.data;
   } catch {
     return null;

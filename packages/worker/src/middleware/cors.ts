@@ -5,6 +5,7 @@ export const corsMiddleware = cors({
     const allowed = [
       'http://localhost:3000',
       'https://shout-web-delta.vercel.app',
+      'https://shout.run',
     ];
     if (allowed.includes(origin)) return origin;
     return null;

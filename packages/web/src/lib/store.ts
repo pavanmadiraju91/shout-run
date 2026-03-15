@@ -3,6 +3,7 @@ import {
   fetchLiveSessions as apiGetLiveSessions,
   fetchRecentSessions as apiGetRecentSessions,
   fetchSession as apiGetSession,
+  fetchCurrentUser as apiGetCurrentUser,
 } from './api';
 import type { RecentSession } from './api';
 import type { Session, SessionSummary, User } from '@shout/shared';
@@ -23,6 +24,7 @@ interface StoreState {
   fetchLiveSessions: () => Promise<void>;
   fetchRecentSessions: () => Promise<void>;
   fetchSession: (id: string) => Promise<SessionWithUser | null>;
+  hydrateUser: () => Promise<void>;
   setUser: (user: User | null) => void;
   clearError: () => void;
 }
@@ -73,6 +75,21 @@ export const useStore = create<StoreState>((set, get) => ({
       console.error('Failed to fetch session:', error);
       set({ error: 'Failed to fetch session', isLoading: false });
       return null;
+    }
+  },
+
+  hydrateUser: async () => {
+    const data = await apiGetCurrentUser();
+    if (data) {
+      set({
+        user: {
+          id: data.id,
+          githubId: 0,
+          username: data.username,
+          avatarUrl: data.avatarUrl,
+          createdAt: '',
+        },
+      });
     }
   },
 
