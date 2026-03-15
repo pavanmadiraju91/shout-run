@@ -173,13 +173,26 @@ sessionsRouter.get('/user/:username', async (c) => {
   }
 
   const userSessions = await db
-    .select()
+    .select({
+      id: sessions.id,
+      userId: sessions.userId,
+      title: sessions.title,
+      status: sessions.status,
+      visibility: sessions.visibility,
+      viewerCount: sessions.viewerCount,
+      tags: sessions.tags,
+      startedAt: sessions.startedAt,
+      endedAt: sessions.endedAt,
+      username: users.username,
+      avatarUrl: users.avatarUrl,
+    })
     .from(sessions)
+    .innerJoin(users, eq(sessions.userId, users.id))
     .where(and(eq(sessions.userId, user.id), eq(sessions.visibility, 'public')))
     .orderBy(desc(sessions.startedAt))
     .limit(50);
 
-  const sessionList: Session[] = userSessions.map((s) => ({
+  const sessionList = userSessions.map((s) => ({
     id: s.id,
     userId: s.userId,
     title: s.title,
@@ -189,6 +202,8 @@ sessionsRouter.get('/user/:username', async (c) => {
     tags: s.tags ? JSON.parse(s.tags) : [],
     startedAt: s.startedAt,
     endedAt: s.endedAt || undefined,
+    username: s.username,
+    avatarUrl: s.avatarUrl,
   }));
 
   return c.json<ApiResponse<Session[]>>({ ok: true, data: sessionList });
@@ -233,6 +248,38 @@ sessionsRouter.get('/:id/ws/broadcaster', async (c) => {
   url.pathname = '/broadcaster';
 
   return doStub.fetch(new Request(url.toString(), c.req.raw));
+});
+
+// POST /api/sessions/:id/end - Explicitly end a session (called by CLI on shutdown)
+sessionsRouter.post('/:id/end', authMiddleware, async (c) => {
+  const sessionId = c.req.param('id')!;
+  const user = c.get('user');
+  const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+
+  const session = await db.query.sessions.findFirst({
+    where: eq(sessions.id, sessionId),
+  });
+
+  if (!session || session.userId !== user.id) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found or unauthorized' }, 404);
+  }
+
+  if (session.status === 'ended') {
+    return c.json<ApiResponse>({ ok: true, data: { already: true } });
+  }
+
+  // Update DB status
+  await db
+    .update(sessions)
+    .set({ status: 'ended', endedAt: new Date().toISOString() })
+    .where(eq(sessions.id, sessionId));
+
+  // Tell the DO to persist replay data
+  const doId = c.env.SESSION_HUB.idFromName(sessionId);
+  const doStub = c.env.SESSION_HUB.get(doId);
+  await doStub.fetch(new Request('https://internal/end', { method: 'POST' })).catch(() => {});
+
+  return c.json<ApiResponse>({ ok: true, data: { ended: true } });
 });
 
 // GET /api/sessions/:id/replay - Get replay data for an ended session

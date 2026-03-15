@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import ora from 'ora';
+import * as pty from 'node-pty';
 import {
   encodeOutputFrame,
   encodeEndFrame,
@@ -14,7 +15,6 @@ import {
   type ApiResponse,
 } from '@shout/shared';
 import { getToken } from '../lib/auth.js';
-import { redactSecrets } from '../lib/secrets.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
 
 const API_BASE = process.env.SHOUT_API_URL ?? 'https://shout-worker.pavannandanmadiraju.workers.dev';
@@ -29,7 +29,6 @@ interface BroadcastStats {
   bytesSent: number;
   viewerCount: number;
   startTime: number;
-  secretsRedacted: number;
 }
 
 function formatDuration(ms: number): string {
@@ -83,15 +82,7 @@ async function createSession(
 }
 
 export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
-  // Check if stdin is a TTY (not piped)
-  if (process.stdin.isTTY) {
-    console.log(chalk.yellow('No input detected. Pipe a command to broadcast:'));
-    console.log();
-    console.log(chalk.dim('  Example: npm test | shout'));
-    console.log(chalk.dim('           make build 2>&1 | shout'));
-    console.log();
-    process.exit(1);
-  }
+  const isPiped = !process.stdin.isTTY;
 
   // Check authentication
   const tokens = await getToken();
@@ -120,11 +111,15 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   console.log(chalk.cyan(`  ${sessionUrl}`));
   console.log();
 
+  if (!isPiped) {
+    console.log(chalk.dim('  Your terminal is now being shared. Type `exit` or press Ctrl+D to stop.'));
+    console.log();
+  }
+
   const stats: BroadcastStats = {
     bytesSent: 0,
     viewerCount: 0,
     startTime: Date.now(),
-    secretsRedacted: 0,
   };
 
   // Rate limiting
@@ -132,7 +127,7 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   let bytesThisSecond = 0;
   let lastSecondReset = Date.now();
 
-  // Connect WebSocket — pass token as query param (Cloudflare Workers don't support custom WS headers)
+  // Connect WebSocket
   const wsUrlWithAuth = `${session.wsUrl}?token=${encodeURIComponent(tokens.accessToken)}`;
   const ws = new ReconnectingWebSocket(wsUrlWithAuth);
 
@@ -140,18 +135,9 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isEnding = false;
 
-  function updateStatus(): void {
-    const duration = formatDuration(Date.now() - stats.startTime);
-    const bytes = formatBytes(stats.bytesSent);
-    process.stderr.write(
-      `\r${chalk.dim(`[${duration}]`)} ${chalk.green(`${stats.viewerCount} viewers`)} ${chalk.dim(`| ${bytes} sent`)}${stats.secretsRedacted > 0 ? chalk.yellow(` | ${stats.secretsRedacted} secrets redacted`) : ''}   `,
-    );
-  }
-
   function flushBuffer(): void {
     if (buffer.length === 0) return;
 
-    // Rate limiting check
     const now = Date.now();
     if (now - lastSecondReset >= 1000) {
       bytesThisSecond = 0;
@@ -161,17 +147,11 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     const data = buffer;
     buffer = '';
 
-    // Redact secrets
-    const { output, matches } = redactSecrets(data);
-    stats.secretsRedacted += matches.length;
+    const bytes = Buffer.byteLength(data, 'utf-8');
 
-    const bytes = Buffer.byteLength(output, 'utf-8');
-
-    // Check rate limit
     if (bytesThisSecond + bytes > maxBytesPerSecond) {
-      // Delay sending
       setTimeout(() => {
-        buffer = output + buffer;
+        buffer = data + buffer;
         flushBuffer();
       }, 1000 - (now - lastSecondReset));
       return;
@@ -181,19 +161,9 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     stats.bytesSent += bytes;
 
     const timestampSec = Math.floor((Date.now() - stats.startTime) / 1000);
-    const frame = encodeOutputFrame(output, timestampSec);
+    const frame = encodeOutputFrame(data, timestampSec);
     ws.send(frame);
-
-    updateStatus();
   }
-
-  ws.on('open', () => {
-    // Send initial terminal size if available
-    if (process.stdout.columns && process.stdout.rows) {
-      const resizeFrame = encodeResizeFrame(process.stdout.columns, process.stdout.rows);
-      ws.send(resizeFrame);
-    }
-  });
 
   ws.on('message', (data) => {
     if (data instanceof ArrayBuffer) {
@@ -201,7 +171,6 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
         const frame = decodeFrame(new Uint8Array(data));
         if (frame.type === FrameType.ViewerCount) {
           stats.viewerCount = decodeViewerCount(frame.payload);
-          updateStatus();
         }
       } catch {
         // Ignore decode errors
@@ -225,7 +194,6 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   });
 
   ws.on('error', (error) => {
-    console.error();
     console.error(chalk.red(`WebSocket error: ${error.message}`));
   });
 
@@ -235,65 +203,127 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
 
   ws.connect();
 
-  // Read stdin
-  process.stdin.setEncoding('utf-8');
-  process.stdin.on('data', (chunk: string) => {
-    buffer += chunk;
-
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-    debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
-  });
-
-  process.stdin.on('end', () => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-    flushBuffer();
-    endSession();
-  });
-
-  // Handle terminal resize
-  process.stdout.on('resize', () => {
-    if (process.stdout.columns && process.stdout.rows) {
-      const resizeFrame = encodeResizeFrame(process.stdout.columns, process.stdout.rows);
-      ws.send(resizeFrame);
-    }
-  });
-
-  // Graceful shutdown
   function endSession(): void {
     if (isEnding) return;
     isEnding = true;
 
-    // Flush any remaining buffer
+    if (debounceTimer) {
+      clearTimeout(debounceTimer);
+    }
+
     if (buffer.length > 0) {
       flushBuffer();
     }
 
-    // Send end frame
-    ws.send(encodeEndFrame());
+    try {
+      ws.send(encodeEndFrame());
+    } catch {
+      // WebSocket may already be closed
+    }
 
-    // Close after a short delay to ensure end frame is sent
-    setTimeout(() => {
-      ws.close(WS_CLOSE.NORMAL, 'Session ended');
+    fetch(`${API_BASE}/api/sessions/${session.sessionId}/end`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${tokens!.accessToken}` },
+    })
+      .catch(() => {})
+      .finally(() => {
+        ws.close(WS_CLOSE.NORMAL, 'Session ended');
 
-      console.log();
-      console.log();
-      console.log(chalk.bold('Broadcast ended'));
-      console.log(
-        chalk.dim(
-          `  Duration: ${formatDuration(Date.now() - stats.startTime)} | ${formatBytes(stats.bytesSent)} sent`,
-        ),
-      );
-      if (stats.secretsRedacted > 0) {
-        console.log(chalk.yellow(`  ${stats.secretsRedacted} potential secrets were redacted`));
-      }
-      console.log();
+        console.log();
+        console.log();
+        console.log(chalk.bold('Broadcast ended'));
+        console.log(
+          chalk.dim(
+            `  Duration: ${formatDuration(Date.now() - stats.startTime)} | ${formatBytes(stats.bytesSent)} sent`,
+          ),
+        );
+        console.log();
 
-      process.exit(0);
-    }, 100);
+        process.exit(0);
+      });
+  }
+
+  if (isPiped) {
+    // ── Pipe mode: read stdin and forward ──
+    process.stdin.setEncoding('utf-8');
+    process.stdin.on('data', (chunk: string) => {
+      buffer += chunk;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
+    });
+
+    process.stdin.on('end', () => {
+      if (debounceTimer) clearTimeout(debounceTimer);
+      flushBuffer();
+      endSession();
+    });
+
+    if (process.stdout.columns && process.stdout.rows) {
+      ws.on('open', () => {
+        const resizeFrame = encodeResizeFrame(process.stdout.columns, process.stdout.rows);
+        ws.send(resizeFrame);
+      });
+    }
+  } else {
+    // ── Interactive PTY mode: spawn a shell and capture everything ──
+    const shell = process.env.SHELL || '/bin/bash';
+    const cols = process.stdout.columns || 80;
+    const rows = process.stdout.rows || 24;
+
+    // Filter out undefined env values — node-pty native code requires string values
+    const cleanEnv: Record<string, string> = {};
+    for (const [key, val] of Object.entries(process.env)) {
+      if (val !== undefined) cleanEnv[key] = val;
+    }
+    cleanEnv.SHOUT_SESSION = '1';
+
+    const ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols,
+      rows,
+      cwd: process.cwd(),
+      env: cleanEnv,
+    });
+
+    // Send initial terminal size
+    ws.on('open', () => {
+      const resizeFrame = encodeResizeFrame(cols, rows);
+      ws.send(resizeFrame);
+    });
+
+    // PTY output → local terminal + WebSocket
+    ptyProcess.onData((data: string) => {
+      // Write to local terminal so the user sees their own output
+      process.stdout.write(data);
+
+      // Buffer and send to WebSocket
+      buffer += data;
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
+    });
+
+    // User keyboard input → PTY
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+    process.stdin.on('data', (data: Buffer) => {
+      ptyProcess.write(data.toString());
+    });
+
+    // Handle terminal resize
+    process.stdout.on('resize', () => {
+      const newCols = process.stdout.columns || 80;
+      const newRows = process.stdout.rows || 24;
+      ptyProcess.resize(newCols, newRows);
+      const resizeFrame = encodeResizeFrame(newCols, newRows);
+      ws.send(resizeFrame);
+    });
+
+    // PTY exits (user typed `exit` or Ctrl+D)
+    ptyProcess.onExit(({ exitCode }) => {
+      // Restore terminal
+      process.stdin.setRawMode(false);
+      endSession();
+    });
   }
 
   process.on('SIGINT', endSession);

@@ -40,7 +40,7 @@ program
 
 program
   .command('broadcast', { isDefault: true })
-  .description('Start broadcasting (default when stdin is piped)')
+  .description('Start broadcasting your terminal')
   .option('-t, --title <title>', 'Session title')
   .option('-v, --visibility <visibility>', 'Visibility: public, followers, private', 'public')
   .option('--tags <tags>', 'Comma-separated tags')

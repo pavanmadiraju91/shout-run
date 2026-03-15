@@ -50,7 +50,6 @@ export function Terminal({ sessionId, isLive, onViewerCountChange }: TerminalPro
 
   const handleResize = useCallback((cols: number, rows: number) => {
     xtermRef.current?.resize(cols, rows);
-    fitAddonRef.current?.fit();
   }, []);
 
   const handleViewerCount = useCallback(

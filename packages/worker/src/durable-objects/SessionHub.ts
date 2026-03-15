@@ -77,9 +77,15 @@ export class SessionHub implements DurableObject {
       return new Response('OK', { status: 200 });
     }
 
+    // Explicit end from API (CLI shutdown fallback)
+    if (path === '/end' && request.method === 'POST') {
+      await this.persistReplayToStorage();
+      return new Response('OK', { status: 200 });
+    }
+
     // Replay data for ended sessions
     if (path === '/replay' && request.method === 'GET') {
-      return this.handleReplay();
+      return await this.handleReplay();
     }
 
     // Handle WebSocket upgrades
@@ -252,7 +258,10 @@ export class SessionHub implements DurableObject {
     }
     this.viewers.clear();
 
-    // Persist session to R2
+    // Persist replay data to DO storage (survives eviction)
+    await this.persistReplayToStorage();
+
+    // Persist session to R2 (if enabled)
     await this.persistSession();
 
     // Update session status in database
@@ -362,10 +371,10 @@ export class SessionHub implements DurableObject {
     }
   }
 
-  private handleReplay(): Response {
-    // Decode stored chunks into replay-friendly format
-    const chunks: Array<{ data: string; timestamp: number }> = [];
+  private async persistReplayToStorage(): Promise<void> {
+    if (this.allChunks.length === 0) return;
 
+    const chunks: Array<{ data: string; timestamp: number }> = [];
     for (const raw of this.allChunks) {
       try {
         const frame = decodeFrame(raw);
@@ -377,6 +386,33 @@ export class SessionHub implements DurableObject {
         // Skip corrupt frames
       }
     }
+
+    await this.state.storage.put('replayChunks', chunks);
+  }
+
+  private async handleReplay(): Promise<Response> {
+    // Try in-memory first (session still alive)
+    if (this.allChunks.length > 0) {
+      const chunks: Array<{ data: string; timestamp: number }> = [];
+      for (const raw of this.allChunks) {
+        try {
+          const frame = decodeFrame(raw);
+          if (frame.type === FrameType.Output) {
+            const text = new TextDecoder().decode(frame.payload);
+            chunks.push({ data: text, timestamp: frame.timestamp * 1000 });
+          }
+        } catch {
+          // Skip corrupt frames
+        }
+      }
+      return new Response(JSON.stringify({ chunks }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    // Fall back to DO storage (after eviction/restart)
+    const stored = await this.state.storage.get<Array<{ data: string; timestamp: number }>>('replayChunks');
+    const chunks = stored ?? [];
 
     return new Response(JSON.stringify({ chunks }), {
       headers: { 'Content-Type': 'application/json' },
