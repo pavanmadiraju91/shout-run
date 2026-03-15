@@ -159,14 +159,16 @@ export default function HomePage() {
 
         {/* ── How it works ──────────────────────────────── */}
         <section className="pb-8">
-          <div className="grid grid-cols-3 gap-px bg-shout-border rounded-lg overflow-hidden">
+          <div className="grid grid-cols-3 gap-px bg-shout-border border border-shout-border rounded-lg overflow-hidden">
             <div className="bg-shout-bg px-4 py-4">
               <div className="flex items-center gap-2 mb-2">
                 <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono">1</span>
                 <span className="text-sm font-medium text-shout-text">Install</span>
               </div>
-              <div className="font-mono text-xs text-shout-muted">
-                <span className="text-shout-green">$</span> npm i -g shout-cli
+              <div className="flex items-center gap-2 bg-shout-surface border border-shout-border rounded px-2.5 py-1.5 font-mono text-xs mt-1">
+                <span className="text-shout-green">$</span>
+                <span className="text-shout-text flex-1">npm i -g shout-cli</span>
+                <CopyButton text="npm i -g shout-cli" size="small" />
               </div>
             </div>
             <div className="bg-shout-bg px-4 py-4">
@@ -174,8 +176,10 @@ export default function HomePage() {
                 <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono">2</span>
                 <span className="text-sm font-medium text-shout-text">Broadcast</span>
               </div>
-              <div className="font-mono text-xs text-shout-muted">
-                <span className="text-shout-green">$</span> shout start
+              <div className="flex items-center gap-2 bg-shout-surface border border-shout-border rounded px-2.5 py-1.5 font-mono text-xs mt-1">
+                <span className="text-shout-green">$</span>
+                <span className="text-shout-text flex-1">shout start</span>
+                <CopyButton text="shout start" size="small" />
               </div>
             </div>
             <div className="bg-shout-bg px-4 py-4">
@@ -183,8 +187,8 @@ export default function HomePage() {
                 <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono">3</span>
                 <span className="text-sm font-medium text-shout-text">Share</span>
               </div>
-              <div className="font-mono text-xs text-shout-muted">
-                shout.run/<span className="text-shout-accent">you</span>/abc123
+              <div className="flex items-center bg-shout-surface border border-shout-border rounded px-2.5 py-1.5 font-mono text-xs mt-1">
+                <span className="text-shout-text">shout.run/<span className="text-shout-accent">you</span>/abc123</span>
               </div>
             </div>
           </div>
