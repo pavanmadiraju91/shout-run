@@ -105,10 +105,16 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
     const containerH = container.clientHeight;
     if (containerW === 0 || containerH === 0) return;
 
-    // Calculate fontSize that makes cols×rows fit the container
-    const maxFontByWidth = containerW / (size.cols * 0.6);
-    const maxFontByHeight = containerH / (size.rows * xterm.options.lineHeight!);
-    const newFontSize = Math.max(8, Math.min(Math.floor(Math.min(maxFontByWidth, maxFontByHeight)), 32));
+    // Account for xterm padding (12px each side from CSS)
+    const availW = containerW - 24;
+    const availH = containerH - 24;
+
+    // Calculate fontSize that makes cols×rows fit the container.
+    // Cell width ≈ fontSize × 0.6, cell height ≈ fontSize × lineHeight.
+    // Use floor and a small safety margin to prevent overflow.
+    const maxFontByWidth = availW / (size.cols * 0.6);
+    const maxFontByHeight = availH / (size.rows * xterm.options.lineHeight!);
+    const newFontSize = Math.max(8, Math.min(Math.floor(Math.min(maxFontByWidth, maxFontByHeight) * 0.95), 32));
 
     if (newFontSize !== xterm.options.fontSize) {
       xterm.options.fontSize = newFontSize;
