@@ -64,9 +64,11 @@ interface TerminalProps {
   isLive: boolean;
   sessionTitle?: string;
   onViewerCountChange?: (count: number) => void;
+  replayMode?: boolean;
+  onTerminalReady?: (xterm: XTerm) => void;
 }
 
-export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange }: TerminalProps) {
+export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange, replayMode, onTerminalReady }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -205,8 +207,11 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
 
       socketRef.current = createSocket(sessionId, callbacks);
       socketRef.current.connect();
+    } else if (replayMode) {
+      // External replay controller manages playback — just expose the xterm instance
+      onTerminalReady?.(xterm);
     } else {
-      // For ended sessions, fetch replay data
+      // Legacy: internal replay for ended sessions
       fetchReplayData(sessionId, xterm, broadcasterSizeRef, fitToContainer);
     }
 
@@ -215,7 +220,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
       socketRef.current?.disconnect();
       xterm.dispose();
     };
-  }, [sessionId, isLive, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, fitToContainer, theme]);
+  }, [sessionId, isLive, replayMode, onTerminalReady, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, fitToContainer, theme]);
 
   const ariaLabel = sessionTitle ? `Terminal session: ${sessionTitle}` : 'Terminal session';
 

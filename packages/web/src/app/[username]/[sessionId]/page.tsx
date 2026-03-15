@@ -4,12 +4,13 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
 import dynamic from 'next/dynamic';
 import { fetchSession } from '@/lib/api';
+import { formatDuration } from '@/lib/time';
 import { LiveBadge } from '@/components/LiveBadge';
-import { ViewerCount } from '@/components/ViewerCount';
+import { useReplayController } from '@/hooks/useReplayController';
 import type { Session } from '@shout/shared';
+import type { Terminal as XTerm } from '@xterm/xterm';
 
 const Terminal = dynamic(() => import('@/components/Terminal').then((mod) => mod.Terminal), {
   ssr: false,
@@ -18,6 +19,10 @@ const Terminal = dynamic(() => import('@/components/Terminal').then((mod) => mod
       <div className="text-shout-muted">Loading terminal...</div>
     </div>
   ),
+});
+
+const PlayerBar = dynamic(() => import('@/components/PlayerBar').then((mod) => mod.PlayerBar), {
+  ssr: false,
 });
 
 interface SessionWithUser extends Session {
@@ -37,6 +42,9 @@ export default function SessionViewerPage() {
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [duration, setDuration] = useState('0:00');
 
+  // xterm ref for replay controller
+  const [xtermInstance, setXtermInstance] = useState<XTerm | null>(null);
+
   useEffect(() => {
     async function loadSession() {
       try {
@@ -54,22 +62,13 @@ export default function SessionViewerPage() {
     loadSession();
   }, [sessionId]);
 
-  // Update duration timer
+  // Live duration timer
   useEffect(() => {
     if (!startTime || session?.status !== 'live') return;
 
     const updateDuration = () => {
-      const now = new Date();
-      const diff = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-      const hours = Math.floor(diff / 3600);
-      const minutes = Math.floor((diff % 3600) / 60);
-      const seconds = diff % 60;
-
-      if (hours > 0) {
-        setDuration(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      } else {
-        setDuration(`${minutes}:${seconds.toString().padStart(2, '0')}`);
-      }
+      const diff = Date.now() - startTime.getTime();
+      setDuration(formatDuration(diff));
     };
 
     updateDuration();
@@ -79,6 +78,10 @@ export default function SessionViewerPage() {
 
   const handleViewerCountChange = useCallback((count: number) => {
     setViewerCount(count);
+  }, []);
+
+  const handleTerminalReady = useCallback((xterm: XTerm) => {
+    setXtermInstance(xterm);
   }, []);
 
   const handleShare = useCallback(async () => {
@@ -96,6 +99,19 @@ export default function SessionViewerPage() {
       await navigator.clipboard.writeText(url);
     }
   }, [username, sessionId, session?.title]);
+
+  const isLive = session?.status === 'live';
+
+  // Replay controller (only active for ended sessions when xterm is ready)
+  const replay = useReplayController(
+    !isLive ? sessionId : '',
+    !isLive ? xtermInstance : null,
+  );
+
+  // Compute session total duration for ended sessions
+  const sessionDurationText = session && !isLive && session.startedAt && session.endedAt
+    ? formatDuration(new Date(session.endedAt).getTime() - new Date(session.startedAt).getTime())
+    : null;
 
   if (isLoading) {
     return (
@@ -144,95 +160,79 @@ export default function SessionViewerPage() {
     );
   }
 
-  const isLive = session.status === 'live';
-
   return (
     <div className="flex flex-col h-[calc(100vh-64px)]">
-      {/* Session Header */}
+      {/* Session Header — 3-column grid */}
       <div className="bg-shout-surface border-b border-shout-border px-4 py-3">
-        <div className="max-w-screen-2xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <Link href={`/${username}`} className="flex-shrink-0 hover:opacity-80">
-              {session.avatarUrl ? (
-                <Image
-                  src={session.avatarUrl}
-                  alt={username}
-                  width={40}
-                  height={40}
-                  className="rounded-full border border-shout-border"
-                />
+        <div className="max-w-screen-2xl mx-auto grid grid-cols-[auto_1fr_auto] items-center gap-3">
+          {/* Left: Avatar */}
+          <Link href={`/${username}`} className="flex-shrink-0 hover:opacity-80 self-start mt-0.5">
+            {session.avatarUrl ? (
+              <Image
+                src={session.avatarUrl}
+                alt={username}
+                width={40}
+                height={40}
+                className="rounded-full border border-shout-border"
+              />
+            ) : (
+              <div className="w-10 h-10 bg-shout-bg rounded-full flex items-center justify-center font-bold">
+                {username.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </Link>
+
+          {/* Center: Username + badge + title */}
+          <div className="min-w-0">
+            <div className="inline-flex items-center gap-2">
+              <Link href={`/${username}`} className="font-medium hover:text-shout-accent transition-colors">
+                {username}
+              </Link>
+              {isLive ? (
+                <LiveBadge size="small" />
               ) : (
-                <div className="w-10 h-10 bg-shout-bg rounded-full flex items-center justify-center font-bold">
-                  {username.charAt(0).toUpperCase()}
-                </div>
+                <span className="text-xs bg-shout-muted/20 text-shout-muted px-2 py-0.5 rounded">
+                  Ended
+                </span>
               )}
-            </Link>
-            <div className="min-w-0">
-              <div className="flex items-center gap-2">
-                <Link href={`/${username}`} className="font-medium hover:text-shout-accent transition-colors">
-                  {username}
-                </Link>
-                {isLive ? (
-                  <LiveBadge />
-                ) : (
-                  <span className="text-xs bg-shout-muted/20 text-shout-muted px-2 py-0.5 rounded">
-                    Ended
-                  </span>
-                )}
-              </div>
-              <div className="text-sm text-shout-muted truncate">
-                {session.title || 'Untitled Session'}
-              </div>
-              {session.description && (
-                <div className="text-xs text-shout-text-secondary truncate mt-0.5">
-                  {session.description}
-                </div>
-              )}
+            </div>
+            <div className="text-sm text-shout-muted truncate">
+              {session.title || 'Untitled Session'}
             </div>
           </div>
 
+          {/* Right: Metadata + actions */}
           <div className="flex items-center gap-4 text-sm flex-shrink-0">
-            <ViewerCount count={viewerCount} />
+            {/* Viewer count (live) */}
+            {isLive && (
+              <div className="flex items-center gap-1.5 text-shout-muted">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                <span className="tabular-nums">{viewerCount.toLocaleString()}</span>
+              </div>
+            )}
 
+            {/* Duration */}
             <div className="flex items-center gap-1.5 text-shout-muted">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="font-mono">
-                {isLive
-                  ? duration
-                  : formatDistanceToNow(new Date(session.startedAt), { addSuffix: false })}
+              <span className="font-mono tabular-nums">
+                {isLive ? duration : sessionDurationText ?? '--:--'}
               </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Separator + actions */}
+            <div className="border-l border-shout-border pl-4 flex items-center gap-2">
               <button
                 onClick={handleShare}
                 className="flex items-center gap-1.5 text-shout-muted hover:text-shout-text transition-colors p-1.5 rounded hover:bg-shout-surface-hover"
                 title="Share session"
               >
-                <svg
-                  className="w-4 h-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
-                  />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
                 <span className="hidden sm:inline text-xs">Share</span>
               </button>
@@ -244,18 +244,8 @@ export default function SessionViewerPage() {
                   className="flex items-center gap-1.5 text-shout-muted hover:text-shout-text transition-colors p-1.5 rounded hover:bg-shout-surface-hover"
                   title="Export as .cast file"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                    />
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                   </svg>
                   <span className="hidden sm:inline text-xs">Export</span>
                 </a>
@@ -271,7 +261,23 @@ export default function SessionViewerPage() {
         isLive={isLive}
         sessionTitle={session.title || undefined}
         onViewerCountChange={handleViewerCountChange}
+        replayMode={!isLive}
+        onTerminalReady={handleTerminalReady}
       />
+
+      {/* Player bar at bottom (ended sessions only) */}
+      {!isLive && !replay.isLoading && replay.totalDuration > 0 && (
+        <PlayerBar
+          isPlaying={replay.isPlaying}
+          currentTime={replay.currentTime}
+          totalDuration={replay.totalDuration}
+          playbackSpeed={replay.playbackSpeed}
+          onPlay={replay.play}
+          onPause={replay.pause}
+          onSeek={replay.seek}
+          onSpeedChange={replay.setSpeed}
+        />
+      )}
     </div>
   );
 }
