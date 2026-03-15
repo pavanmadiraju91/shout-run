@@ -8,7 +8,7 @@
  */
 
 // ── Frame Types ──────────────────────────────────────────────
-export const enum FrameType {
+export enum FrameType {
   /** Terminal output data */
   Output = 0x01,
   /** Session metadata (title, user info) */
