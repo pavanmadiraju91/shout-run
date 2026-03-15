@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
+import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { createSocket, type SocketCallbacks } from '@/lib/socket';
 import { useTheme } from '@/components/ThemeProvider';
@@ -68,8 +69,10 @@ interface TerminalProps {
 export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange }: TerminalProps) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const socketRef = useRef<ReturnType<typeof createSocket> | null>(null);
   const announceRef = useRef<HTMLDivElement>(null);
+  const broadcasterSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const { theme } = useTheme();
 
   // Swap xterm theme when the global theme changes
@@ -82,41 +85,54 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
     xtermRef.current?.write(data);
   }, []);
 
-  const scaleTerminal = useCallback(() => {
+  /**
+   * Calculate the optimal fontSize so that the broadcaster's cols×rows
+   * fills the container without overflow, then resize xterm to match.
+   */
+  const fitToContainer = useCallback(() => {
     const container = terminalRef.current;
-    if (!container) return;
-    const xtermScreen = container.querySelector('.xterm-screen') as HTMLElement | null;
-    if (!xtermScreen) return;
+    const xterm = xtermRef.current;
+    if (!container || !xterm) return;
 
-    // Temporarily remove scale to measure natural size
-    xtermScreen.style.transform = '';
-    const naturalW = xtermScreen.offsetWidth;
-    const naturalH = xtermScreen.offsetHeight;
+    const size = broadcasterSizeRef.current;
+    if (!size) {
+      // No broadcaster size yet — use FitAddon for best fit
+      fitAddonRef.current?.fit();
+      return;
+    }
+
     const containerW = container.clientWidth;
     const containerH = container.clientHeight;
+    if (containerW === 0 || containerH === 0) return;
 
-    if (naturalW === 0 || naturalH === 0) return;
+    // Calculate fontSize that makes cols×rows fit the container
+    const maxFontByWidth = containerW / (size.cols * 0.6);
+    const maxFontByHeight = containerH / (size.rows * xterm.options.lineHeight!);
+    const newFontSize = Math.max(8, Math.min(Math.floor(Math.min(maxFontByWidth, maxFontByHeight)), 32));
 
-    // Scale up or down to fill the container while preserving aspect ratio
-    const scale = Math.min(containerW / naturalW, containerH / naturalH);
-    xtermScreen.style.transform = `scale(${scale})`;
-    xtermScreen.style.transformOrigin = 'top left';
+    if (newFontSize !== xterm.options.fontSize) {
+      xterm.options.fontSize = newFontSize;
+    }
+
+    // Resize to the broadcaster's dimensions
+    if (xterm.cols !== size.cols || xterm.rows !== size.rows) {
+      xterm.resize(size.cols, size.rows);
+    }
   }, []);
 
   const handleResize = useCallback(
     (cols: number, rows: number) => {
-      xtermRef.current?.resize(cols, rows);
-      // Re-scale after the terminal's natural size changes
-      requestAnimationFrame(scaleTerminal);
+      broadcasterSizeRef.current = { cols, rows };
+      fitToContainer();
     },
-    [scaleTerminal]
+    [fitToContainer],
   );
 
   const handleViewerCount = useCallback(
     (count: number) => {
       onViewerCountChange?.(count);
     },
-    [onViewerCountChange]
+    [onViewerCountChange],
   );
 
   const handleEnd = useCallback(() => {
@@ -138,7 +154,6 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
 
     const initialTheme = theme === 'light' ? LIGHT_THEME : DARK_THEME;
 
-    // Initialize xterm.js with fixed dimensions (broadcaster will send real size via Resize frame)
     const xterm = new XTerm({
       theme: initialTheme,
       fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, monospace',
@@ -154,18 +169,21 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
       screenReaderMode: true,
     });
 
+    const fitAddon = new FitAddon();
     const webLinksAddon = new WebLinksAddon();
+    xterm.loadAddon(fitAddon);
     xterm.loadAddon(webLinksAddon);
 
     xterm.open(terminalRef.current);
     xtermRef.current = xterm;
+    fitAddonRef.current = fitAddon;
 
-    // Initial scale after xterm renders
-    requestAnimationFrame(scaleTerminal);
+    // Initial fit
+    requestAnimationFrame(() => fitToContainer());
 
-    // Re-scale whenever the container size changes
+    // Re-fit when the container resizes (e.g. window resize)
     const resizeObserver = new ResizeObserver(() => {
-      scaleTerminal();
+      fitToContainer();
     });
     resizeObserver.observe(terminalRef.current);
 
@@ -183,7 +201,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
       socketRef.current.connect();
     } else {
       // For ended sessions, fetch replay data
-      fetchReplayData(sessionId, xterm);
+      fetchReplayData(sessionId, xterm, broadcasterSizeRef, fitToContainer);
     }
 
     return () => {
@@ -191,7 +209,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
       socketRef.current?.disconnect();
       xterm.dispose();
     };
-  }, [sessionId, isLive, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, scaleTerminal, theme]);
+  }, [sessionId, isLive, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, fitToContainer, theme]);
 
   const ariaLabel = sessionTitle ? `Terminal session: ${sessionTitle}` : 'Terminal session';
 
@@ -202,13 +220,18 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange 
       className="flex-1 relative bg-shout-bg overflow-hidden"
       style={{ minHeight: 0 }}
     >
-      <div ref={terminalRef} className="absolute inset-0" />
+      <div ref={terminalRef} className="absolute inset-0 p-2" />
       <div ref={announceRef} className="sr-only" aria-live="polite" />
     </div>
   );
 }
 
-async function fetchReplayData(sessionId: string, xterm: XTerm) {
+async function fetchReplayData(
+  sessionId: string,
+  xterm: XTerm,
+  broadcasterSizeRef: React.MutableRefObject<{ cols: number; rows: number } | null>,
+  fitToContainer: () => void,
+) {
   try {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
     const response = await fetch(`${apiUrl}/api/sessions/${sessionId}/replay`);
@@ -234,7 +257,8 @@ async function fetchReplayData(sessionId: string, xterm: XTerm) {
         await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 100)));
       }
       if (chunk.type === 'resize' && chunk.cols && chunk.rows) {
-        xterm.resize(chunk.cols, chunk.rows);
+        broadcasterSizeRef.current = { cols: chunk.cols, rows: chunk.rows };
+        fitToContainer();
       } else if (chunk.data) {
         xterm.write(chunk.data);
       }

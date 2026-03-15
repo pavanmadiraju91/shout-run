@@ -64,6 +64,9 @@ export class SessionHub implements DurableObject {
     // Restore any WebSocket connections that survived hibernation
     this.state.getWebSockets('broadcaster').forEach((ws) => {
       this.broadcaster = ws;
+      // After hibernation, treat wake-up as proof of life so the alarm
+      // doesn't immediately kill the session (lastBroadcasterActivity was 0).
+      this.lastBroadcasterActivity = Date.now();
     });
     this.state.getWebSockets('viewer').forEach((ws) => {
       this.viewers.add(ws);
