@@ -145,16 +145,17 @@ async function fetchReplayData(sessionId: string, xterm: XTerm) {
       return;
     }
 
-    const data = await response.json();
+    const json = await response.json();
+    const replayData = json.data;
 
-    if (!data.chunks || data.chunks.length === 0) {
+    if (!replayData?.chunks || replayData.chunks.length === 0) {
       xterm.write('\x1b[90m--- No data recorded for this session ---\x1b[0m\r\n');
       return;
     }
 
     // Play back the chunks with timing
     let lastTimestamp = 0;
-    for (const chunk of data.chunks) {
+    for (const chunk of replayData.chunks) {
       const delay = chunk.timestamp - lastTimestamp;
       if (delay > 0 && delay < 5000) {
         await new Promise((resolve) => setTimeout(resolve, Math.min(delay, 100)));

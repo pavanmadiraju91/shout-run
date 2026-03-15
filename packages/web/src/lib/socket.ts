@@ -33,7 +33,7 @@ export function createSocket(sessionId: string, callbacks: SocketCallbacks): Soc
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
     const wsProtocol = apiUrl.startsWith('https') ? 'wss' : 'ws';
     const host = apiUrl.replace(/^https?:\/\//, '') || window.location.host;
-    return `${wsProtocol}://${host}/api/sessions/${sessionId}/ws`;
+    return `${wsProtocol}://${host}/api/sessions/${sessionId}/ws/viewer`;
   }
 
   function handleMessage(event: MessageEvent) {

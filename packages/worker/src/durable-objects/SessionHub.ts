@@ -77,6 +77,11 @@ export class SessionHub implements DurableObject {
       return new Response('OK', { status: 200 });
     }
 
+    // Replay data for ended sessions
+    if (path === '/replay' && request.method === 'GET') {
+      return this.handleReplay();
+    }
+
     // Handle WebSocket upgrades
     if (path === '/broadcaster') {
       return this.handleBroadcasterUpgrade(request);
@@ -355,6 +360,27 @@ export class SessionHub implements DurableObject {
     } catch (err) {
       console.error('Error persisting session:', err);
     }
+  }
+
+  private handleReplay(): Response {
+    // Decode stored chunks into replay-friendly format
+    const chunks: Array<{ data: string; timestamp: number }> = [];
+
+    for (const raw of this.allChunks) {
+      try {
+        const frame = decodeFrame(raw);
+        if (frame.type === FrameType.Output) {
+          const text = new TextDecoder().decode(frame.payload);
+          chunks.push({ data: text, timestamp: frame.timestamp * 1000 });
+        }
+      } catch {
+        // Skip corrupt frames
+      }
+    }
+
+    return new Response(JSON.stringify({ chunks }), {
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
   async alarm(): Promise<void> {

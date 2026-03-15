@@ -235,6 +235,35 @@ sessionsRouter.get('/:id/ws/broadcaster', async (c) => {
   return doStub.fetch(new Request(url.toString(), c.req.raw));
 });
 
+// GET /api/sessions/:id/replay - Get replay data for an ended session
+sessionsRouter.get('/:id/replay', async (c) => {
+  const sessionId = c.req.param('id')!;
+
+  const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+  const session = await db.query.sessions.findFirst({
+    where: eq(sessions.id, sessionId),
+  });
+
+  if (!session) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Ask the Durable Object for its stored chunks
+  const doId = c.env.SESSION_HUB.idFromName(sessionId);
+  const doStub = c.env.SESSION_HUB.get(doId);
+
+  const replayResponse = await doStub.fetch(
+    new Request('https://internal/replay', { method: 'GET' }),
+  );
+
+  if (!replayResponse.ok) {
+    return c.json<ApiResponse>({ ok: true, data: { chunks: [] } });
+  }
+
+  const replayData = await replayResponse.json();
+  return c.json<ApiResponse>({ ok: true, data: replayData });
+});
+
 // WebSocket upgrade for viewer
 sessionsRouter.get('/:id/ws/viewer', async (c) => {
   const sessionId = c.req.param('id')!;

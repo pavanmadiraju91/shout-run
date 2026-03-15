@@ -113,7 +113,8 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     process.exit(1);
   }
 
-  const sessionUrl = `${API_BASE}/s/${session.sessionId}`;
+  const WEB_BASE = process.env.SHOUT_WEB_URL ?? 'https://shout-web-delta.vercel.app';
+  const sessionUrl = `${WEB_BASE}/${tokens.username}/${session.sessionId}`;
   console.log();
   console.log(chalk.bold('Broadcasting live at:'));
   console.log(chalk.cyan(`  ${sessionUrl}`));

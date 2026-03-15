@@ -52,16 +52,14 @@ program
     });
   });
 
-// Detect if stdin is piped and no command given
-const hasCommand = process.argv.length > 2 && !process.argv[2].startsWith('-');
+// Detect if stdin is piped with no explicit command
+const hasExplicitCommand = process.argv.length > 2 &&
+  ['login', 'logout', 'whoami', 'broadcast'].includes(process.argv[2]);
 const isPiped = !process.stdin.isTTY;
 
-if (isPiped && !hasCommand) {
-  // Auto-run broadcast when piped
-  broadcast().catch((error) => {
-    console.error(error);
-    process.exit(1);
-  });
-} else {
-  program.parse();
+if (isPiped && !hasExplicitCommand) {
+  // Insert 'broadcast' command so Commander parses flags like --title correctly
+  process.argv.splice(2, 0, 'broadcast');
 }
+
+program.parse();
