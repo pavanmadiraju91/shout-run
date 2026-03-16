@@ -40,6 +40,19 @@ export const follows = sqliteTable('follows', {
   createdAt: text('created_at').notNull(),
 });
 
+export const apiKeys = sqliteTable('api_keys', {
+  id: text('id').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => users.id),
+  name: text('name').notNull(),
+  keyHash: text('key_hash').notNull(),
+  prefix: text('prefix').notNull(),
+  createdAt: text('created_at').notNull(),
+  lastUsedAt: text('last_used_at'),
+  revokedAt: text('revoked_at'),
+});
+
 // ── Database Client ───────────────────────────────────────────
 
 export function createDb(url: string, authToken: string) {
@@ -49,7 +62,7 @@ export function createDb(url: string, authToken: string) {
   });
 
   return drizzle(client, {
-    schema: { users, sessions, follows },
+    schema: { users, sessions, follows, apiKeys },
   });
 }
 

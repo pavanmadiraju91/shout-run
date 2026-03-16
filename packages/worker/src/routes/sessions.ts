@@ -354,10 +354,25 @@ sessionsRouter.get('/:id/ws/broadcaster', async (c) => {
     return c.json<ApiResponse>({ ok: false, error: 'Missing auth token' }, 401);
   }
 
-  const { verifyToken } = await import('../lib/jwt.js');
-  const payload = await verifyToken(token, c.env.JWT_SECRET);
-  if (!payload) {
-    return c.json<ApiResponse>({ ok: false, error: 'Invalid token' }, 401);
+  // Resolve userId from either API key or JWT
+  let userId: string;
+
+  const { isApiKey, hashApiKey, resolveApiKeyUser } = await import('../lib/api-keys.js');
+  if (isApiKey(token)) {
+    const keyHash = await hashApiKey(token);
+    const keyDb = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+    const apiKeyUser = await resolveApiKeyUser(keyDb, keyHash);
+    if (!apiKeyUser) {
+      return c.json<ApiResponse>({ ok: false, error: 'Invalid or revoked API key' }, 401);
+    }
+    userId = apiKeyUser.id;
+  } else {
+    const { verifyToken } = await import('../lib/jwt.js');
+    const payload = await verifyToken(token, c.env.JWT_SECRET);
+    if (!payload) {
+      return c.json<ApiResponse>({ ok: false, error: 'Invalid token' }, 401);
+    }
+    userId = payload.sub;
   }
 
   // Verify session belongs to this user
@@ -366,7 +381,7 @@ sessionsRouter.get('/:id/ws/broadcaster', async (c) => {
     where: eq(sessions.id, sessionId),
   });
 
-  if (!session || session.userId !== payload.sub) {
+  if (!session || session.userId !== userId) {
     return c.json<ApiResponse>({ ok: false, error: 'Session not found or unauthorized' }, 404);
   }
 

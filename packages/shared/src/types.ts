@@ -104,3 +104,23 @@ export const DEFAULT_RATE_LIMITS: RateLimits = {
   maxSessionDurationMs: 4 * 60 * 60 * 1000, // 4 hours
   maxSessionsPerDay: 50,
 };
+
+// ── API Keys ────────────────────────────────────────────────
+export interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
+export interface CreateApiKeyRequest {
+  name: string;
+}
+
+export interface CreateApiKeyResponse {
+  id: string;
+  name: string;
+  prefix: string;
+  key: string; // full key, returned only at creation
+}

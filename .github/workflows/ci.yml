@@ -64,6 +64,9 @@ jobs:
       - name: Typecheck Worker
         run: pnpm --filter @shout/worker run typecheck
 
+      - name: Typecheck SDK
+        run: pnpm --filter @shout/sdk run typecheck
+
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -88,6 +91,9 @@ jobs:
 
       - name: Build CLI
         run: pnpm --filter @shout/cli run build
+
+      - name: Build SDK
+        run: pnpm --filter @shout/sdk run build
 
       - name: Build Web
         run: pnpm --filter @shout/web run build

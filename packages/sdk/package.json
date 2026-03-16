@@ -1,0 +1,36 @@
+{
+  "name": "@shout/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for shout.run - programmatic terminal broadcasting",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@shout/shared": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.12",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
