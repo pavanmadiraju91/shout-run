@@ -53,7 +53,11 @@ jobs:
             exit 1
           fi
 
+      - name: Set publish name
+        run: node -e "const p=require('./packages/cli/package.json'); p.name='shout-run'; require('fs').writeFileSync('./packages/cli/package.json', JSON.stringify(p, null, 2)+'\n')"
+
       - name: Publish to npm
-        run: pnpm --filter @shout/cli publish --access public --no-git-checks
+        working-directory: packages/cli
+        run: npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
