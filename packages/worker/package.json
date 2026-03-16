@@ -11,14 +11,14 @@
     "clean": "rm -rf dist .turbo .wrangler"
   },
   "dependencies": {
-    "@libsql/client": "^0.14.0",
+    "@libsql/client": "^0.17.0",
     "@shout/shared": "workspace:*",
-    "drizzle-orm": "^0.38.0",
+    "drizzle-orm": "^0.45.1",
     "hono": "^4.6.0"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260313.1",
+    "@cloudflare/workers-types": "^4.20260316.1",
     "typescript": "^5.7.0",
-    "wrangler": "^4.73.0"
+    "wrangler": "^4.74.0"
   }
 }
