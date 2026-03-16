@@ -15,7 +15,7 @@ We take security seriously. If you discover a vulnerability, please report it re
 
 ### Preferred Method
 
-Use [GitHub's Private Vulnerability Reporting](https://github.com/pavanmadiraju91/shout/security/advisories/new) feature to submit your report directly through GitHub.
+Use [GitHub's Private Vulnerability Reporting](https://github.com/pavanmadiraju91/shout-run/security/advisories/new) feature to submit your report directly through GitHub.
 
 ### Alternative Contact
 
@@ -33,7 +33,7 @@ The following are in scope for security reports:
 
 - **Web application**: shout.run
 - **Worker API**: api.shout.run
-- **CLI**: shout-cli npm package
+- **CLI**: shout-run npm package
 
 ## Out of Scope
 

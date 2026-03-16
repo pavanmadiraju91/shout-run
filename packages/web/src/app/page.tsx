@@ -118,8 +118,8 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-10 flex items-center justify-between">
           <div className="flex items-center gap-3 font-mono text-xs text-shout-muted">
             <span className="text-shout-green">$</span>
-            <span className="text-shout-text">npm i -g shout-cli</span>
-            <CopyButton text="npm i -g shout-cli" size="small" />
+            <span className="text-shout-text">npm i -g shout-run</span>
+            <CopyButton text="npm i -g shout-run" size="small" />
           </div>
           <div className="flex items-center gap-3 text-[11px] text-shout-muted">
             <span className="hidden sm:flex items-center gap-1">
@@ -131,7 +131,7 @@ export default function HomePage() {
               Open source
             </span>
             <a
-              href="https://github.com/pavanmadiraju91/shout"
+              href="https://github.com/pavanmadiraju91/shout-run"
               target="_blank"
               rel="noopener noreferrer"
               className="text-shout-accent hover:underline"
@@ -168,8 +168,8 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2 bg-shout-surface border border-shout-border rounded px-2.5 py-1.5 font-mono text-xs mt-1">
                 <span className="text-shout-green">$</span>
-                <span className="text-shout-text flex-1">npm i -g shout-cli</span>
-                <CopyButton text="npm i -g shout-cli" size="small" />
+                <span className="text-shout-text flex-1">npm i -g shout-run</span>
+                <CopyButton text="npm i -g shout-run" size="small" />
               </div>
             </div>
             <div className="bg-shout-bg px-4 py-4">
@@ -257,7 +257,7 @@ export default function HomePage() {
             <Link href="/about" className="hover:text-shout-text transition-colors">About</Link>
             <span className="text-shout-border">|</span>
             <a
-              href="https://github.com/pavanmadiraju91/shout"
+              href="https://github.com/pavanmadiraju91/shout-run"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-shout-text transition-colors"

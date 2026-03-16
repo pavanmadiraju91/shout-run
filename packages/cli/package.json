@@ -1,29 +1,46 @@
 {
   "name": "@shout/cli",
   "version": "0.1.0",
-  "description": "CLI for shout - live terminal broadcasting",
+  "description": "CLI for shout.run - live terminal broadcasting",
   "type": "module",
+  "license": "MIT",
+  "author": "Pavan Madiraju",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pavanmadiraju91/shout-run.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://shout.run",
+  "keywords": [
+    "terminal",
+    "broadcast",
+    "live",
+    "cli",
+    "tty",
+    "share",
+    "streaming",
+    "developer-tools"
+  ],
   "bin": {
     "shout": "./dist/index.js"
   },
   "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "files": [
     "dist"
   ],
   "publishConfig": {
-    "name": "shout-cli",
+    "name": "shout-run",
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
+    "build": "tsup",
+    "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build",
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
     "@inquirer/prompts": "^7.0.0",
-    "@shout/shared": "workspace:*",
     "chalk": "^5.3.0",
     "commander": "^12.1.0",
     "node-pty": "^1.1.0",
@@ -35,8 +52,10 @@
     "keytar": "^7.9.0"
   },
   "devDependencies": {
+    "@shout/shared": "workspace:*",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.12",
+    "tsup": "^8.5.1",
     "typescript": "^5.7.0"
   },
   "engines": {

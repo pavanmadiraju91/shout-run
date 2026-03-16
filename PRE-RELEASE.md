@@ -74,10 +74,10 @@
 ## Code Hygiene
 
 - [ ] **Review `package.json` repo URL** — currently points to
-  `https://github.com/pavanmadiraju91/shout.git`.
+  `https://github.com/pavanmadiraju91/shout-run.git`.
   Already updated to `shout`.
-- [ ] **CLI publishConfig** — `packages/cli/package.json` has `publishConfig.name: "shout-cli"` and
-  `access: "public"`. Make sure the npm name isn't squatted before you publish.
+- [x] **CLI publishConfig** — `packages/cli/package.json` has `publishConfig.name: "shout-run"` and
+  `access: "public"`. Name confirmed available on npm.
 - [ ] **Check for TODO/FIXME/HACK comments** — do a quick grep; remove anything embarrassing or
   that references internal context you don't want public.
 - [ ] **Verify self-hosting docs still work** — README has a self-hosting section; make sure

@@ -3,9 +3,9 @@
   <p><strong>Live terminal broadcasting for developers</strong></p>
   <p>Broadcast your terminal to the world. Live.</p>
   <p>
-    <a href="https://www.npmjs.com/package/shout-cli"><img src="https://img.shields.io/npm/v/shout-cli" alt="npm version" /></a>
-    <a href="https://github.com/pavanmadiraju91/shout/actions/workflows/ci.yml"><img src="https://github.com/pavanmadiraju91/shout/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <a href="https://github.com/pavanmadiraju91/shout/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
+    <a href="https://www.npmjs.com/package/shout-run"><img src="https://img.shields.io/npm/v/shout-run" alt="npm version" /></a>
+    <a href="https://github.com/pavanmadiraju91/shout-run/actions/workflows/ci.yml"><img src="https://github.com/pavanmadiraju91/shout-run/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/pavanmadiraju91/shout-run/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
   </p>
 </div>
 
@@ -25,7 +25,7 @@
 
 ```bash
 # Install globally
-npm install -g shout-cli
+npm install -g shout-run
 
 # Authenticate with GitHub
 shout login
@@ -140,7 +140,7 @@ When stdin is piped, `broadcast` is selected automatically — no need to type `
 ```
 packages/
   shared/    @shout/shared    Types, binary protocol, constants (build first)
-  cli/       shout-cli        Commander.js CLI (node-pty, ws, keytar)
+  cli/       @shout/cli       Commander.js CLI — published as `shout-run` on npm
   worker/    @shout/worker    Cloudflare Workers + Durable Objects (Hono, Drizzle, Turso)
   web/       @shout/web       Next.js 15 / React 19 frontend (xterm.js, Zustand)
 ```
@@ -181,8 +181,8 @@ Every frame follows the format: `[type: 1 byte][timestamp: 4 bytes uint32][paylo
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/pavanmadiraju91/shout.git
-cd shout
+git clone https://github.com/pavanmadiraju91/shout-run.git
+cd shout-run
 pnpm install
 ```
 
@@ -288,6 +288,6 @@ MIT License - see [LICENSE](LICENSE) for details.
   <p>Built with <a href="https://workers.cloudflare.com/">Cloudflare Workers</a>, <a href="https://turso.tech/">Turso</a>, <a href="https://nextjs.org/">Next.js</a>, and <a href="https://xtermjs.org/">xterm.js</a></p>
   <p>
     <a href="https://shout.dev">Website</a> &middot;
-    <a href="https://github.com/pavanmadiraju91/shout/issues">Issues</a>
+    <a href="https://github.com/pavanmadiraju91/shout-run/issues">Issues</a>
   </p>
 </div>

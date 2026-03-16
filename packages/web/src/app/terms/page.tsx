@@ -37,12 +37,12 @@ export default function TermsPage() {
           <p className="mt-2">
             shout is open-source software released under the MIT License. The source code is available at{' '}
             <a
-              href="https://github.com/pavanmadiraju91/shout"
+              href="https://github.com/pavanmadiraju91/shout-run"
               target="_blank"
               rel="noopener noreferrer"
               className="text-shout-accent hover:underline"
             >
-              github.com/pavanmadiraju91/shout
+              github.com/pavanmadiraju91/shout-run
             </a>.
           </p>
         </section>

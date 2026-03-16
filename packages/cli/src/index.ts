@@ -1,21 +1,17 @@
-#!/usr/bin/env node
+declare const __CLI_VERSION__: string;
 
-import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { login } from './commands/login.js';
 import { logout } from './commands/logout.js';
 import { whoami } from './commands/whoami.js';
 import { broadcast } from './commands/broadcast.js';
 
-const require = createRequire(import.meta.url);
-const pkg = require('../package.json') as { version: string };
-
 const program = new Command();
 
 program
   .name('shout')
   .description('Live terminal broadcasting for developers')
-  .version(pkg.version);
+  .version(__CLI_VERSION__);
 
 program
   .command('login')

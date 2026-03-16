@@ -43,7 +43,7 @@ export function Header() {
 
             {/* GitHub link */}
             <a
-              href="https://github.com/pavanmadiraju91/shout"
+              href="https://github.com/pavanmadiraju91/shout-run"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 text-shout-muted hover:text-shout-text transition-colors rounded-md hover:bg-shout-surface"

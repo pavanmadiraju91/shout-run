@@ -75,7 +75,7 @@ export default function AboutPage() {
             <span>
               Install the CLI globally with{' '}
               <code className="bg-shout-surface px-1.5 py-0.5 rounded text-sm">
-                npm install -g shout-cli
+                npm install -g shout-run
               </code>
             </span>
           </li>
@@ -117,7 +117,7 @@ export default function AboutPage() {
         <div className="mt-12 pt-8 border-t border-shout-border">
           <p className="text-sm">
             Questions or feedback?{' '}
-            <Link href="https://github.com/pavanmadiraju91/shout" className="text-shout-accent hover:underline">
+            <Link href="https://github.com/pavanmadiraju91/shout-run" className="text-shout-accent hover:underline">
               Open an issue on GitHub
             </Link>
           </p>
