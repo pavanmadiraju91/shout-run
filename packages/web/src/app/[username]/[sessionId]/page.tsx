@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -41,6 +41,9 @@ export default function SessionViewerPage() {
   const [error, setError] = useState<string | null>(null);
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [duration, setDuration] = useState('0:00');
+  const [showEmbed, setShowEmbed] = useState(false);
+  const [copiedSnippet, setCopiedSnippet] = useState<string | null>(null);
+  const embedRef = useRef<HTMLDivElement>(null);
 
   // xterm ref for replay controller
   const [xtermInstance, setXtermInstance] = useState<XTerm | null>(null);
@@ -104,6 +107,24 @@ export default function SessionViewerPage() {
       await navigator.clipboard.writeText(url);
     }
   }, [username, sessionId, session?.title]);
+
+  // Close embed popover on outside click
+  useEffect(() => {
+    if (!showEmbed) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (embedRef.current && !embedRef.current.contains(e.target as Node)) {
+        setShowEmbed(false);
+      }
+    };
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => document.removeEventListener('mousedown', handleMouseDown);
+  }, [showEmbed]);
+
+  const handleCopySnippet = useCallback(async (text: string, label: string) => {
+    await navigator.clipboard.writeText(text);
+    setCopiedSnippet(label);
+    setTimeout(() => setCopiedSnippet(null), 2000);
+  }, []);
 
   const isLive = session?.status === 'live';
 
@@ -244,17 +265,78 @@ export default function SessionViewerPage() {
               </button>
 
               {!isLive && (
-                <a
-                  href={`${process.env.NEXT_PUBLIC_API_URL || ''}/api/sessions/${sessionId}/export`}
-                  download
-                  className="flex items-center gap-1.5 text-shout-muted hover:text-shout-text transition-colors p-1.5 rounded hover:bg-shout-surface-hover"
-                  title="Export as .cast file"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
-                  <span className="hidden sm:inline text-xs">Export</span>
-                </a>
+                <>
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL || ''}/api/sessions/${sessionId}/export`}
+                    download
+                    className="flex items-center gap-1.5 text-shout-muted hover:text-shout-text transition-colors p-1.5 rounded hover:bg-shout-surface-hover"
+                    title="Export as .cast file"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span className="hidden sm:inline text-xs">Export</span>
+                  </a>
+
+                  <div className="relative" ref={embedRef}>
+                    <button
+                      onClick={() => setShowEmbed((v) => !v)}
+                      className="flex items-center gap-1.5 text-shout-muted hover:text-shout-text transition-colors p-1.5 rounded hover:bg-shout-surface-hover"
+                      title="Embed this session"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                      <span className="hidden sm:inline text-xs">Embed</span>
+                    </button>
+
+                    {showEmbed && (
+                      <div className="absolute right-0 top-full mt-2 w-80 bg-shout-surface border border-shout-border rounded-lg shadow-lg p-3 z-50">
+                        <div className="text-xs font-medium text-shout-text mb-2">Embed this session</div>
+
+                        <div className="mb-3">
+                          <label className="text-[10px] text-shout-muted uppercase tracking-wider">iframe</label>
+                          <div className="flex gap-1.5 mt-1">
+                            <code className="flex-1 text-[11px] bg-shout-bg text-shout-text-secondary p-2 rounded border border-shout-border break-all leading-relaxed select-all">
+                              {`<iframe src="https://shout.run/embed/${sessionId}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>`}
+                            </code>
+                            <button
+                              onClick={() =>
+                                handleCopySnippet(
+                                  `<iframe src="https://shout.run/embed/${sessionId}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>`,
+                                  'iframe',
+                                )
+                              }
+                              className="self-start text-[10px] text-shout-muted hover:text-shout-text transition-colors px-2 py-1 rounded border border-shout-border hover:bg-shout-surface-hover flex-shrink-0"
+                            >
+                              {copiedSnippet === 'iframe' ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] text-shout-muted uppercase tracking-wider">Script tag</label>
+                          <div className="flex gap-1.5 mt-1">
+                            <code className="flex-1 text-[11px] bg-shout-bg text-shout-text-secondary p-2 rounded border border-shout-border break-all leading-relaxed select-all">
+                              {`<script src="https://shout.run/embed/${sessionId}/script.js"></script>`}
+                            </code>
+                            <button
+                              onClick={() =>
+                                handleCopySnippet(
+                                  `<script src="https://shout.run/embed/${sessionId}/script.js"></script>`,
+                                  'script',
+                                )
+                              }
+                              className="self-start text-[10px] text-shout-muted hover:text-shout-text transition-colors px-2 py-1 rounded border border-shout-border hover:bg-shout-surface-hover flex-shrink-0"
+                            >
+                              {copiedSnippet === 'script' ? 'Copied!' : 'Copy'}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </>
               )}
             </div>
           </div>

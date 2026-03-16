@@ -3,6 +3,7 @@ import type { Env } from './env.js';
 import { corsMiddleware } from './middleware/cors.js';
 import { auth } from './routes/auth.js';
 import { sessionsRouter } from './routes/sessions.js';
+import { oembedRouter } from './routes/oembed.js';
 
 // Re-export Durable Object
 export { SessionHub } from './durable-objects/SessionHub.js';
@@ -21,6 +22,7 @@ app.get('/health', (c) => {
 // Mount routes
 app.route('/api/auth', auth);
 app.route('/api/sessions', sessionsRouter);
+app.route('/api/oembed', oembedRouter);
 
 // User sessions route (different path structure)
 app.get('/api/users/:username/sessions', async (c) => {
