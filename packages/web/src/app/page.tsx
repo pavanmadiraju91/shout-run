@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { FeedItem } from '@/components/FeedItem';
 
@@ -130,7 +131,7 @@ export default function HomePage() {
               Open source
             </span>
             <a
-              href="https://github.com/pavanmadiraju91/ideal-robot"
+              href="https://github.com/pavanmadiraju91/shout"
               target="_blank"
               rel="noopener noreferrer"
               className="text-shout-accent hover:underline"
@@ -178,8 +179,8 @@ export default function HomePage() {
               </div>
               <div className="flex items-center gap-2 bg-shout-surface border border-shout-border rounded px-2.5 py-1.5 font-mono text-xs mt-1">
                 <span className="text-shout-green">$</span>
-                <span className="text-shout-text flex-1">shout start</span>
-                <CopyButton text="shout start" size="small" />
+                <span className="text-shout-text flex-1">shout</span>
+                <CopyButton text="shout" size="small" />
               </div>
             </div>
             <div className="bg-shout-bg px-4 py-4">
@@ -195,7 +196,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Feed ──────────────────────────────────────── */}
-        <section className="pb-16">
+        <section className="pb-8">
           {/* Tab bar */}
           <div className="flex items-center gap-0 border-b border-shout-border">
             <button
@@ -245,6 +246,26 @@ export default function HomePage() {
             )}
           </div>
         </section>
+
+        {/* ── Footer ─────────────────────────────────────── */}
+        <footer className="pb-8 pt-4 border-t border-shout-border">
+          <div className="flex items-center justify-center gap-4 text-xs text-shout-muted">
+            <Link href="/terms" className="hover:text-shout-text transition-colors">Terms</Link>
+            <span className="text-shout-border">|</span>
+            <Link href="/privacy" className="hover:text-shout-text transition-colors">Privacy</Link>
+            <span className="text-shout-border">|</span>
+            <Link href="/about" className="hover:text-shout-text transition-colors">About</Link>
+            <span className="text-shout-border">|</span>
+            <a
+              href="https://github.com/pavanmadiraju91/shout"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-shout-text transition-colors"
+            >
+              GitHub
+            </a>
+          </div>
+        </footer>
       </div>
     </>
   );

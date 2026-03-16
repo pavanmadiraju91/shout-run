@@ -4,7 +4,7 @@ import open from 'open';
 import type { DeviceCodeResponse, ApiResponse, AuthTokens } from '@shout/shared';
 import { saveToken, isLoggedIn, removeToken } from '../lib/auth.js';
 
-const API_BASE = process.env.SHOUT_API_URL ?? 'https://shout-worker.pavannandanmadiraju.workers.dev';
+const API_BASE = process.env.SHOUT_API_URL ?? 'https://api.shout.run';
 
 async function requestDeviceCode(): Promise<DeviceCodeResponse> {
   const response = await fetch(`${API_BASE}/api/auth/device-code`, {

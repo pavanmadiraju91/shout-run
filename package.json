@@ -5,7 +5,7 @@
   "description": "Live terminal broadcasting for developers",
   "repository": {
     "type": "git",
-    "url": "https://github.com/pavanmadiraju91/ideal-robot.git"
+    "url": "https://github.com/pavanmadiraju91/shout.git"
   },
   "license": "MIT",
   "packageManager": "pnpm@9.15.4",

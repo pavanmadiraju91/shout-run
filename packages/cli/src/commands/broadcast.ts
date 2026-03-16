@@ -49,7 +49,7 @@ const SENSITIVE_ENV_PREFIXES = [
   'MAILGUN_API_KEY',
 ];
 
-const API_BASE = process.env.SHOUT_API_URL ?? 'https://shout-worker.pavannandanmadiraju.workers.dev';
+const API_BASE = process.env.SHOUT_API_URL ?? 'https://api.shout.run';
 
 interface BroadcastOptions {
   title?: string;
@@ -168,7 +168,7 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     process.exit(1);
   }
 
-  const WEB_BASE = process.env.SHOUT_WEB_URL ?? 'https://shout-web-delta.vercel.app';
+  const WEB_BASE = process.env.SHOUT_WEB_URL ?? 'https://shout.run';
   const sessionUrl = `${WEB_BASE}/${tokens.username}/${session.sessionId}`;
   console.log();
   console.log(chalk.bold('  Live at:'));

@@ -51,7 +51,7 @@ export default defineConfig({
 "author": "Pavan Madiraju",
 "repository": {
   "type": "git",
-  "url": "https://github.com/pavanmadiraju91/ideal-robot.git",
+  "url": "https://github.com/pavanmadiraju91/shout.git",
   "directory": "packages/cli"
 },
 "homepage": "https://shout.run",

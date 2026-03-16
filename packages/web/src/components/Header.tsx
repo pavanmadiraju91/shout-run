@@ -43,7 +43,7 @@ export function Header() {
 
             {/* GitHub link */}
             <a
-              href="https://github.com/pavanmadiraju91/ideal-robot"
+              href="https://github.com/pavanmadiraju91/shout"
               target="_blank"
               rel="noopener noreferrer"
               className="p-2 text-shout-muted hover:text-shout-text transition-colors rounded-md hover:bg-shout-surface"

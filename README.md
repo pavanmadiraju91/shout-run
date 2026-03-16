@@ -4,8 +4,8 @@
   <p>Broadcast your terminal to the world. Live.</p>
   <p>
     <a href="https://www.npmjs.com/package/shout-cli"><img src="https://img.shields.io/npm/v/shout-cli" alt="npm version" /></a>
-    <a href="https://github.com/pavanmadiraju91/ideal-robot/actions/workflows/ci.yml"><img src="https://github.com/pavanmadiraju91/ideal-robot/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <a href="https://github.com/pavanmadiraju91/ideal-robot/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
+    <a href="https://github.com/pavanmadiraju91/shout/actions/workflows/ci.yml"><img src="https://github.com/pavanmadiraju91/shout/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+    <a href="https://github.com/pavanmadiraju91/shout/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
   </p>
 </div>
 
@@ -181,8 +181,8 @@ Every frame follows the format: `[type: 1 byte][timestamp: 4 bytes uint32][paylo
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/pavanmadiraju91/ideal-robot.git
-cd ideal-robot
+git clone https://github.com/pavanmadiraju91/shout.git
+cd shout
 pnpm install
 ```
 
@@ -288,6 +288,6 @@ MIT License - see [LICENSE](LICENSE) for details.
   <p>Built with <a href="https://workers.cloudflare.com/">Cloudflare Workers</a>, <a href="https://turso.tech/">Turso</a>, <a href="https://nextjs.org/">Next.js</a>, and <a href="https://xtermjs.org/">xterm.js</a></p>
   <p>
     <a href="https://shout.dev">Website</a> &middot;
-    <a href="https://github.com/pavanmadiraju91/ideal-robot/issues">Issues</a>
+    <a href="https://github.com/pavanmadiraju91/shout/issues">Issues</a>
   </p>
 </div>

@@ -1,6 +1,6 @@
 # Pre-Release Checklist
 
-> What to do before flipping `ideal-robot` from private to public.
+> What to do before flipping `shout` from private to public.
 > Not a formal compliance doc — just a "hey, check these boxes first" reference.
 
 ---
@@ -74,8 +74,8 @@
 ## Code Hygiene
 
 - [ ] **Review `package.json` repo URL** — currently points to
-  `https://github.com/pavanmadiraju91/ideal-robot.git`.
-  Update if you're renaming the repo (e.g., `shout` instead of `ideal-robot`).
+  `https://github.com/pavanmadiraju91/shout.git`.
+  Already updated to `shout`.
 - [ ] **CLI publishConfig** — `packages/cli/package.json` has `publishConfig.name: "shout-cli"` and
   `access: "public"`. Make sure the npm name isn't squatted before you publish.
 - [ ] **Check for TODO/FIXME/HACK comments** — do a quick grep; remove anything embarrassing or
