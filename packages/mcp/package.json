@@ -1,0 +1,56 @@
+{
+  "name": "@shout/mcp",
+  "version": "0.1.0",
+  "description": "MCP server for shout.run — let AI agents broadcast terminal sessions",
+  "type": "module",
+  "bin": {
+    "shout-mcp": "./dist/index.js"
+  },
+  "main": "./dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "pnpm build",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "ws": "^8.18.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@shout/shared": "workspace:*",
+    "@types/node": "^22.0.0",
+    "@types/ws": "^8.5.12",
+    "tsup": "^8.5.1",
+    "typescript": "^5.7.0"
+  },
+  "publishConfig": {
+    "name": "shout-run-mcp",
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "Pavan Madiraju",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pavanmadiraju91/shout-run.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://shout.run",
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "terminal",
+    "broadcast",
+    "ai",
+    "agent",
+    "claude",
+    "shout"
+  ],
+  "engines": {
+    "node": ">=20"
+  }
+}
