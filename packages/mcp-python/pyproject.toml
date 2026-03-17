@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shout-run-mcp"
+version = "0.1.0"
+description = "MCP server for shout.run — live terminal broadcasting for AI agents"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [{ name = "Pavan Madiraju" }]
+keywords = ["mcp", "terminal", "broadcasting", "shout", "ai-agents"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "shout-run-sdk>=0.1.0",
+]
+
+[project.scripts]
+shout-mcp = "shout_mcp:main"
+
+[project.urls]
+Homepage = "https://shout.run"
+Repository = "https://github.com/pavanmadiraju91/shout-run"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/shout_mcp"]
