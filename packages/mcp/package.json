@@ -1,6 +1,6 @@
 {
   "name": "@shout/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP server for shout.run — let AI agents broadcast terminal sessions",
   "type": "module",
   "bin": {
