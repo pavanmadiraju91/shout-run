@@ -1,4 +1,9 @@
-# shout-run-sdk
+<div align="center">
+  <a href="https://shout.run">
+    <img src="https://raw.githubusercontent.com/pavanmadiraju91/shout-run/main/packages/web/public/logo.png" alt="shout.run" width="120" />
+  </a>
+  <h1>shout-run-sdk</h1>
+</div>
 
 Python SDK for [shout.run](https://shout.run) — programmatic terminal broadcasting.
 
