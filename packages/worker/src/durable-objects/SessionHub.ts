@@ -9,7 +9,6 @@ import {
   encodePing,
   FrameType,
   WS_CLOSE,
-  LATE_JOINER_BUFFER_SIZE,
   DEFAULT_RATE_LIMITS,
   PING_INTERVAL_MS,
 } from '@shout/shared';
@@ -29,11 +28,6 @@ interface SessionState {
   startedAt: number;
 }
 
-interface BufferedChunk {
-  data: Uint8Array;
-  timestamp: number;
-}
-
 export class SessionHub implements DurableObject {
   private state: DurableObjectState;
   private env: Env;
@@ -45,8 +39,9 @@ export class SessionHub implements DurableObject {
   private broadcaster: WebSocket | null = null;
   private viewers: Set<WebSocket> = new Set();
 
-  // Ring buffer for late joiners
-  private buffer: BufferedChunk[] = [];
+  // Last Resize frame for late-joining viewers (so xterm.js gets correct dimensions)
+  private lastResizeFrame: Uint8Array | null = null;
+
   private allChunks: Uint8Array[] = [];
   private allChunksBytes = 0;
   private replayCapReached = false;
@@ -176,52 +171,13 @@ export class SessionHub implements DurableObject {
     });
     server.send(metaFrame);
 
-    // Replay session history for late joiners.
-    // Decode stored frames, merge consecutive output text into ≤64 KB batches
-    // to avoid flooding the WebSocket send buffer with hundreds of tiny messages.
-    const replaySource =
-      this.allChunks.length > 0
-        ? this.allChunks
-        : this.buffer.map((b) => b.data);
-
-    if (replaySource.length > 0) {
-      const MAX_TEXT_BATCH = 64 * 1024;
-      const decoder = new TextDecoder();
-      let textBuf = '';
-      let lastTs = 0;
-
-      const flushText = () => {
-        if (textBuf.length === 0) return;
-        server.send(encodeOutputFrame(textBuf, lastTs));
-        textBuf = '';
-      };
-
-      for (const raw of replaySource) {
-        try {
-          const frame = decodeFrame(raw);
-
-          if (frame.type === FrameType.Output) {
-            const text = decoder.decode(frame.payload);
-            lastTs = frame.timestamp;
-
-            if (textBuf.length + text.length > MAX_TEXT_BATCH) {
-              flushText();
-            }
-            textBuf += text;
-          } else if (frame.type === FrameType.Resize) {
-            // Flush pending text before sending a resize
-            flushText();
-            const view = new DataView(frame.payload.buffer, frame.payload.byteOffset, frame.payload.byteLength);
-            server.send(encodeResizeFrame(view.getUint16(0), view.getUint16(2)));
-          }
-          // Skip other frame types (Meta already sent above, Ping/Pong irrelevant)
-        } catch {
-          // Skip corrupt frames
-        }
-      }
-
-      flushText();
+    // Send last known Resize frame so xterm.js gets the right terminal dimensions
+    if (this.lastResizeFrame) {
+      server.send(this.lastResizeFrame);
     }
+
+    // No output replay — late joiners see live output from the moment they connect.
+    // Full replay is available after the session ends.
 
     // Update and broadcast viewer count
     this.broadcastViewerCount();
@@ -270,9 +226,9 @@ export class SessionHub implements DurableObject {
         frame.type === FrameType.Resize ||
         frame.type === FrameType.Meta
       ) {
-        this.buffer.push({ data: bytes, timestamp: now });
-        if (this.buffer.length > LATE_JOINER_BUFFER_SIZE) {
-          this.buffer.shift();
+        // Track latest Resize frame for late-joining viewers
+        if (frame.type === FrameType.Resize) {
+          this.lastResizeFrame = bytes.slice();
         }
 
         // Store all chunks for persistence (up to memory cap) — skip for private sessions

@@ -12,8 +12,6 @@ export const WS_CLOSE = {
 /** Debounce interval for batching terminal output */
 export const CHUNK_DEBOUNCE_MS = 16;
 
-/** Max chunks kept in memory for late joiners */
-export const LATE_JOINER_BUFFER_SIZE = 100;
 
 /** Keepalive ping interval */
 export const PING_INTERVAL_MS = 30_000;
