@@ -17,7 +17,16 @@ import {
 import { createDb, sessions } from '../lib/db.js';
 import { eq } from 'drizzle-orm';
 
-import { VtParser } from '../lib/vt-wasm/vt_wasm.js';
+import init, { VtParser } from '../lib/vt-wasm/vt_wasm.js';
+import vtWasmModule from '../lib/vt-wasm/vt_wasm_bg.wasm';
+
+let wasmReady = false;
+async function ensureWasm(): Promise<void> {
+  if (!wasmReady) {
+    await init(vtWasmModule);
+    wasmReady = true;
+  }
+}
 
 /** Maximum bytes to accumulate in allChunks for replay (50 MB). */
 const MAX_REPLAY_BYTES = 50 * 1024 * 1024;
@@ -186,6 +195,7 @@ export class SessionHub implements DurableObject {
     // Send terminal state snapshot for late joiners
     if (this.vtParser) {
       try {
+        await ensureWasm();
         const snapshot: Uint8Array = this.vtParser.state_formatted();
         if (snapshot.length > 0) {
           server.send(encodeSnapshotFrame(snapshot));
@@ -248,6 +258,7 @@ export class SessionHub implements DurableObject {
 
           // Create or resize the virtual terminal parser
           const { cols, rows } = decodeResize(frame.payload);
+          await ensureWasm();
           if (this.vtParser) {
             this.vtParser.resize(rows, cols);
           } else {

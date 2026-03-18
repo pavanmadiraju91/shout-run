@@ -55,8 +55,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: Build shared package
         run: pnpm --filter @shout/shared run build
+
+      - name: Build vt-wasm
+        run: pnpm --filter @shout/vt-wasm run build
+
+      - name: Copy vt-wasm to worker
+        run: node packages/worker/scripts/copy-vt-wasm.js
 
       - name: Typecheck CLI
         run: pnpm --filter @shout/cli run typecheck
