@@ -429,4 +429,5 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
 
   process.on('SIGINT', endSession);
   process.on('SIGTERM', endSession);
+  process.on('SIGHUP', endSession);
 }
