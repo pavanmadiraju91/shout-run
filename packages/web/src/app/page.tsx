@@ -154,7 +154,7 @@ export default function HomePage() {
             <span className="text-shout-green">Live.</span>
           </h1>
           <p className="text-shout-muted text-sm sm:text-base max-w-md mx-auto">
-            Stream your terminal to the world. No screen sharing, no setup, no accounts needed to watch.
+            Stream your terminal to the world. Viewers just click a link.
           </p>
         </section>
 
