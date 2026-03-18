@@ -94,6 +94,7 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
         username: user.username,
         title: newSession.title,
         description: description || undefined,
+        visibility,
       }),
     }),
   );
@@ -440,7 +441,10 @@ sessionsRouter.get('/:id/replay', async (c) => {
     return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
   }
 
-  // Private sessions are unlisted — accessible via direct link, just not discoverable.
+  // Private sessions have no replay data
+  if (session.visibility === 'private') {
+    return c.json<ApiResponse>({ ok: true, data: { chunks: [] } });
+  }
 
   // Ask the Durable Object for its stored chunks
   const doId = c.env.SESSION_HUB.idFromName(sessionId);
@@ -469,6 +473,11 @@ sessionsRouter.get('/:id/export', async (c) => {
 
   if (!session) {
     return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Private sessions have no replay/export data
+  if (session.visibility === 'private') {
+    return c.json<ApiResponse>({ ok: false, error: 'Export not available for private sessions' }, 404);
   }
 
   // Forward to Durable Object

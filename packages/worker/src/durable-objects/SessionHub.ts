@@ -25,6 +25,7 @@ interface SessionState {
   username: string;
   title: string;
   description?: string;
+  visibility?: 'public' | 'followers' | 'private';
   startedAt: number;
 }
 
@@ -274,8 +275,8 @@ export class SessionHub implements DurableObject {
           this.buffer.shift();
         }
 
-        // Store all chunks for persistence (up to memory cap)
-        if (!this.replayCapReached) {
+        // Store all chunks for persistence (up to memory cap) — skip for private sessions
+        if (!this.replayCapReached && this.sessionState?.visibility !== 'private') {
           if (this.allChunksBytes + bytes.byteLength > MAX_REPLAY_BYTES) {
             this.replayCapReached = true;
           } else {
@@ -400,6 +401,7 @@ export class SessionHub implements DurableObject {
   }
 
   private async persistSession(): Promise<void> {
+    if (this.sessionState?.visibility === 'private') return;
     if (!this.sessionState || this.allChunks.length === 0) return;
     if (!this.env.SESSIONS_BUCKET) return; // R2 not enabled
 
@@ -469,6 +471,8 @@ export class SessionHub implements DurableObject {
    * so replay data survives Durable Object hibernation.
    */
   private async persistReplayToStorage(): Promise<void> {
+    if (this.sessionState?.visibility === 'private') return;
+
     // Only flush chunks we haven't persisted yet
     const newChunks = this.allChunks.slice(this.flushedChunkCount);
     if (newChunks.length === 0) return;
@@ -515,6 +519,13 @@ export class SessionHub implements DurableObject {
     // Ensure session state is loaded (needed for R2 fallback)
     if (!this.sessionState) {
       this.sessionState = await this.state.storage.get<SessionState>('sessionState') ?? null;
+    }
+
+    // Private sessions have no replay
+    if (this.sessionState?.visibility === 'private') {
+      return new Response(JSON.stringify({ chunks: [] }), {
+        headers: { 'Content-Type': 'application/json' },
+      });
     }
 
     // Try in-memory first (session still alive)
@@ -586,6 +597,10 @@ export class SessionHub implements DurableObject {
         return new Response('Session not found', { status: 404 });
       }
       this.sessionState = stored;
+    }
+
+    if (this.sessionState.visibility === 'private') {
+      return new Response('Export not available for private sessions', { status: 404 });
     }
 
     // Get chunks — prefer in-memory, fall back to DO storage
