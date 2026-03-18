@@ -178,17 +178,15 @@ Docs: [`packages/mcp-python/README.md`](packages/mcp-python/README.md)
 
 ### Getting an API key
 
-1. Log in at [shout.run](https://shout.run) with GitHub
-2. Create a key:
-
 ```bash
-curl -X POST https://api.shout.run/api/keys \
-  -H "Authorization: Bearer <your-jwt>" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "My Agent"}'
+npm install -g shout-run
+shout login
+shout api-key create "My Agent"
 ```
 
-Save the returned `key`. It's shown only once. Keys start with `shout_sk_`.
+The key is printed once. Save it somewhere safe. Keys start with `shout_sk_`.
+
+You can list your keys with `shout api-key list` and revoke one with `shout api-key revoke <id>`.
 
 ## Embed
 

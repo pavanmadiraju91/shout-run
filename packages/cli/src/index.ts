@@ -5,6 +5,7 @@ import { login } from './commands/login.js';
 import { logout } from './commands/logout.js';
 import { whoami } from './commands/whoami.js';
 import { broadcast } from './commands/broadcast.js';
+import { createApiKey, listApiKeys, revokeApiKey } from './commands/api-key.js';
 
 const program = new Command();
 
@@ -48,9 +49,32 @@ program
     });
   });
 
+const apiKey = program.command('api-key').description('Manage API keys for SDK and MCP access');
+
+apiKey
+  .command('create <name>')
+  .description('Create a new API key')
+  .action(async (name: string) => {
+    await createApiKey(name);
+  });
+
+apiKey
+  .command('list')
+  .description('List your API keys')
+  .action(async () => {
+    await listApiKeys();
+  });
+
+apiKey
+  .command('revoke <id>')
+  .description('Revoke an API key')
+  .action(async (id: string) => {
+    await revokeApiKey(id);
+  });
+
 // Detect if stdin is piped with no explicit command
 const hasExplicitCommand = process.argv.length > 2 &&
-  ['login', 'logout', 'whoami', 'broadcast'].includes(process.argv[2]);
+  ['login', 'logout', 'whoami', 'broadcast', 'api-key'].includes(process.argv[2]);
 const isPiped = !process.stdin.isTTY;
 
 if (isPiped && !hasExplicitCommand) {

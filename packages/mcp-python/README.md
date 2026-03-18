@@ -23,7 +23,17 @@ uvx shout-run-mcp
 
 ## Setup
 
-Get an API key at [shout.run](https://shout.run), then configure your MCP client.
+Get an API key with the CLI:
+
+```bash
+npm install -g shout-run
+shout login
+shout api-key create "My MCP Server"
+```
+
+The key is printed once. Save it somewhere safe. Keys start with `shout_sk_`.
+
+Then configure your MCP client.
 
 ### Claude Code
 

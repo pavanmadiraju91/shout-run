@@ -25,6 +25,9 @@ Your session goes live instantly at `https://shout.run/<username>/<session-id>`.
 | `shout login` | Authenticate with GitHub |
 | `shout logout` | Remove stored credentials |
 | `shout whoami` | Display current logged-in user |
+| `shout api-key create <name>` | Create a new API key |
+| `shout api-key list` | List your API keys |
+| `shout api-key revoke <id>` | Revoke an API key |
 
 ### Broadcast options
 
@@ -38,6 +41,16 @@ shout --tags "rust,cli,demo"         # comma-separated tags
 
 ```bash
 cargo test 2>&1 | shout --title "Test run"
+```
+
+### API keys
+
+Create API keys for use with the SDK and MCP packages:
+
+```bash
+shout api-key create "My Agent"    # create a key (shown only once)
+shout api-key list                 # list your keys
+shout api-key revoke <id>          # revoke a key
 ```
 
 ## How it works

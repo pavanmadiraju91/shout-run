@@ -36,17 +36,15 @@ await session.end();
 
 ## Getting an API Key
 
-1. Log in to shout.run with GitHub
-2. Create an API key via the API:
-
 ```bash
-curl -X POST https://api.shout.run/api/keys \
-  -H "Authorization: Bearer <your-jwt>" \
-  -H "Content-Type: application/json" \
-  -d '{"name": "My Agent"}'
+npm install -g shout-run
+shout login
+shout api-key create "My Agent"
 ```
 
-The response includes your `key` — save it securely, it's shown only once.
+The key is printed once. Save it somewhere safe. Keys start with `shout_sk_`.
+
+You can list your keys with `shout api-key list` and revoke one with `shout api-key revoke <id>`.
 
 ## API Reference
 
