@@ -1,6 +1,6 @@
 <div align="center">
   <a href="https://shout.run">
-    <img src="https://raw.githubusercontent.com/pavanmadiraju91/shout-run/main/packages/web/public/logo.png" alt="shout.run" width="120" />
+    <img src="https://shout.run/logo.png" alt="shout.run" width="120" />
   </a>
   <h1>shout</h1>
   <p><strong>Live terminal broadcasting for developers</strong></p>
@@ -58,12 +58,6 @@ tail -f /var/log/app.log | shout
 ```
 
 When stdin is piped, shout detects it automatically. No subcommand needed.
-
-### Environment variable stripping
-
-Sensitive data is protected **before it ever leaves your machine**. The CLI strips 25 known sensitive env var prefixes from the broadcast shell: `AWS_SECRET`, `GITHUB_TOKEN`, `OPENAI_API_KEY`, `STRIPE_SECRET`, `DATABASE_URL`, `JWT_SECRET`, and more.
-
-Even if you run `env` or `printenv` mid-broadcast, those values won't appear. The stripping happens locally before the shell starts, so secrets never reach the network.
 
 ### Session visibility
 
@@ -265,17 +259,16 @@ packages/
 │   │  CLI/SDK  │   frames   │  (fan-out hub)  │  binary  │  + xterm  │  │
 │   └───────────┘            └────────┬────────┘  frames  └───────────┘  │
 │       │                             │                        │         │
-│   env-var stripping         Turso DB (sessions,        real-time       │
-│   + binary encoding         users, follows)            decoding        │
+│   binary encoding           Turso DB (sessions,        real-time       │
+│                              users, follows)            decoding        │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
 1. The CLI or SDK captures terminal output (PTY for interactive, stdin for piped, `write()` for programmatic)
-2. Sensitive environment variables are stripped from the broadcast shell (CLI only)
-3. Data is encoded into a compact binary frame protocol and sent over WebSocket
-4. A Cloudflare Durable Object (SessionHub) fans out frames to all connected viewers
-5. The Next.js web app decodes frames and renders them into an xterm.js terminal
+2. Data is encoded into a compact binary frame protocol and sent over WebSocket
+3. A Cloudflare Durable Object (SessionHub) fans out frames to all connected viewers
+4. The Next.js web app decodes frames and renders them into an xterm.js terminal
 
 ### Binary WebSocket protocol
 

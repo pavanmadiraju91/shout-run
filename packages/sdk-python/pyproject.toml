@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shout-run-sdk"
-version = "0.1.1"
-description = "Python SDK for shout.run — programmatic terminal broadcasting"
+version = "0.1.2"
+description = "Python SDK for shout.run - broadcast your terminal from code"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"

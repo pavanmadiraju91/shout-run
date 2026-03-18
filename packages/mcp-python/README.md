@@ -1,13 +1,13 @@
 <div align="center">
   <a href="https://shout.run">
-    <img src="https://raw.githubusercontent.com/pavanmadiraju91/shout-run/main/packages/web/public/logo.png" alt="shout.run" width="120" />
+    <img src="https://shout.run/logo.png" alt="shout.run" width="120" />
   </a>
   <h1>shout-run-mcp</h1>
 </div>
 
-MCP server for [shout.run](https://shout.run) — live terminal broadcasting for AI agents.
+MCP server for [shout.run](https://shout.run). Terminal broadcasting for AI agents.
 
-Let your AI agents broadcast terminal output so humans can watch in real-time.
+Agents broadcast and viewers watch in a browser. Works with Claude Code, Cursor, Windsurf, and other MCP clients.
 
 ## Install
 

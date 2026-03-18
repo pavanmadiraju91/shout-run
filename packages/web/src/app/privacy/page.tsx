@@ -65,12 +65,6 @@ export default function PrivacyPage() {
           <ul className="list-disc list-inside text-shout-muted space-y-2">
             <li>Passwords (GitHub OAuth only)</li>
             <li>Payment data (no paid tier)</li>
-            <li>
-              Sensitive environment variables — the CLI strips 25 categories before broadcast,
-              including: AWS_SECRET, GITHUB_TOKEN, GH_TOKEN, NPM_TOKEN, OPENAI_API_KEY,
-              ANTHROPIC_API_KEY, STRIPE_SECRET, DATABASE_URL, JWT_SECRET, PRIVATE_KEY,
-              SECRET_KEY, CLOUDFLARE_API_TOKEN, and others
-            </li>
           </ul>
         </section>
 
@@ -112,7 +106,6 @@ export default function PrivacyPage() {
           <ul className="list-disc list-inside text-shout-muted space-y-2">
             <li>WSS (WebSocket Secure) encryption for all broadcasts</li>
             <li>JWT-based authentication</li>
-            <li>CLI-side environment variable stripping before data leaves your machine</li>
           </ul>
         </section>
 

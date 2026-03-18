@@ -101,26 +101,7 @@ export default function TermsPage() {
 
         {/* 6 */}
         <section>
-          <h2 className="text-xl font-semibold text-shout-text mb-3">6. Secret Redaction Disclaimer</h2>
-          <p>
-            The shout CLI includes a best-effort feature that strips 25 categories of commonly sensitive
-            environment variables (including AWS_SECRET, GITHUB_TOKEN, OPENAI_API_KEY, STRIPE_SECRET,
-            DATABASE_URL, JWT_SECRET, and others) from the broadcast shell environment before it starts.
-          </p>
-          <p className="mt-2 font-medium text-shout-text">
-            This is a convenience feature, not a security guarantee.
-          </p>
-          <p className="mt-2">
-            The redaction covers environment variable prefixes only and cannot detect secrets embedded in
-            files, command arguments, or application output. You are solely responsible for ensuring that
-            sensitive information is not exposed during a broadcast. We strongly recommend reviewing your
-            terminal environment before starting a live session.
-          </p>
-        </section>
-
-        {/* 7 */}
-        <section>
-          <h2 className="text-xl font-semibold text-shout-text mb-3">7. Open Source Components</h2>
+          <h2 className="text-xl font-semibold text-shout-text mb-3">6. Open Source Components</h2>
           <p>
             shout incorporates third-party open-source software components, each governed by its own
             license. These components are provided &quot;as is&quot; without warranty. Our liability does
@@ -128,9 +109,9 @@ export default function TermsPage() {
           </p>
         </section>
 
-        {/* 8 */}
+        {/* 7 */}
         <section>
-          <h2 className="text-xl font-semibold text-shout-text mb-3">8. Disclaimer of Warranties</h2>
+          <h2 className="text-xl font-semibold text-shout-text mb-3">7. Disclaimer of Warranties</h2>
           <p>
             THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT WARRANTIES OF
             ANY KIND, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO IMPLIED WARRANTIES OF
@@ -142,9 +123,9 @@ export default function TermsPage() {
           </p>
         </section>
 
-        {/* 9 */}
+        {/* 8 */}
         <section>
-          <h2 className="text-xl font-semibold text-shout-text mb-3">9. Limitation of Liability</h2>
+          <h2 className="text-xl font-semibold text-shout-text mb-3">8. Limitation of Liability</h2>
           <p>
             TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL SHOUT, ITS CONTRIBUTORS, OR ITS
             SERVICE PROVIDERS BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE
@@ -153,9 +134,9 @@ export default function TermsPage() {
           </p>
         </section>
 
-        {/* 10 */}
+        {/* 9 */}
         <section>
-          <h2 className="text-xl font-semibold text-shout-text mb-3">10. Termination</h2>
+          <h2 className="text-xl font-semibold text-shout-text mb-3">9. Termination</h2>
           <p>
             You may stop using the Service at any time. We may suspend or terminate your access to the
             Service at any time for violations of these Terms or for any other reason at our discretion,
@@ -167,9 +148,9 @@ export default function TermsPage() {
           </p>
         </section>
 
-        {/* 11 */}
+        {/* 10 */}
         <section>
-          <h2 className="text-xl font-semibold text-shout-text mb-3">11. Changes to Terms</h2>
+          <h2 className="text-xl font-semibold text-shout-text mb-3">10. Changes to Terms</h2>
           <p>
             We reserve the right to modify these Terms at any time. Changes will be posted on this page
             with an updated &quot;Last updated&quot; date. Your continued use of the Service after changes
@@ -177,9 +158,9 @@ export default function TermsPage() {
           </p>
         </section>
 
-        {/* 12 */}
+        {/* 11 */}
         <section>
-          <h2 className="text-xl font-semibold text-shout-text mb-3">12. Contact</h2>
+          <h2 className="text-xl font-semibold text-shout-text mb-3">11. Contact</h2>
           <p>
             For questions about these Terms, contact us at{' '}
             <a href="mailto:legal@shout.run" className="text-shout-accent hover:underline">

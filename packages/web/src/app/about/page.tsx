@@ -36,12 +36,6 @@ export default function AboutPage() {
             export, nothing persisted.
           </p>
 
-          <p>
-            The CLI strips 25 categories of environment variables (API keys, tokens, database URLs)
-            before the broadcast shell even starts. It&apos;s not foolproof, but it catches the common
-            stuff so you&apos;re less likely to leak a secret on stream.
-          </p>
-
           <h2 className="text-lg font-semibold text-shout-text pt-4">Beyond the CLI</h2>
 
           <p>

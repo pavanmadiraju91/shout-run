@@ -1,6 +1,6 @@
 # shout.run CLI
 
-Live terminal broadcasting for developers. Share your terminal session in real-time with anyone.
+Live terminal broadcasting for developers. Share your terminal with anyone who has a browser.
 
 ## Install
 
@@ -42,7 +42,7 @@ cargo test 2>&1 | shout --title "Test run"
 
 ## How it works
 
-The CLI captures your terminal output via a PTY, streams it over WebSocket to the shout.run relay, and viewers watch in real-time through a web terminal. Sensitive environment variables are automatically stripped before the shell spawns.
+The CLI captures your terminal output via a PTY, streams it over WebSocket to the shout.run relay, and viewers watch in real-time through a web terminal.
 
 ## Requirements
 

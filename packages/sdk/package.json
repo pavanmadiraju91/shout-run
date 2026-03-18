@@ -1,7 +1,7 @@
 {
   "name": "@shout/sdk",
-  "version": "0.1.1",
-  "description": "TypeScript SDK for shout.run - programmatic terminal broadcasting",
+  "version": "0.1.2",
+  "description": "TypeScript SDK for shout.run - broadcast your terminal from code",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

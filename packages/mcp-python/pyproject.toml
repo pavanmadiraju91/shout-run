@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shout-run-mcp"
-version = "0.1.1"
-description = "MCP server for shout.run — live terminal broadcasting for AI agents"
+version = "0.1.2"
+description = "MCP server for shout.run - terminal broadcasting for AI agents"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
