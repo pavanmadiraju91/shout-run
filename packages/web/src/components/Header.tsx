@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import Image from 'next/image';
 import { useStore } from '@/lib/store';
 import { useTheme } from '@/components/ThemeProvider';
 
@@ -16,13 +15,6 @@ export function Header() {
         <div className="h-14 flex items-center justify-between">
           {/* Brand */}
           <Link href="/" className="flex items-center gap-2.5 group">
-            <Image
-              src="/logo.png"
-              alt="shout.run"
-              width={28}
-              height={28}
-              className="rounded transition-transform group-hover:scale-105"
-            />
             <span className="text-base font-bold font-mono tracking-tight text-shout-text">
               shout<span className="text-shout-green">.run</span>
             </span>
