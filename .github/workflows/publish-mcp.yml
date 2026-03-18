@@ -1,6 +1,7 @@
 name: Publish MCP
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - 'mcp-v*'
