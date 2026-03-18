@@ -127,6 +127,7 @@ export default function SessionViewerPage() {
   }, []);
 
   const isLive = session?.status === 'live';
+  const isPrivate = session?.visibility === 'private';
 
   // Replay controller (only active for ended sessions when xterm is ready)
   const replay = useReplayController(
@@ -222,6 +223,14 @@ export default function SessionViewerPage() {
                   Ended
                 </span>
               )}
+              {isPrivate && (
+                <span className="text-xs bg-shout-muted/10 text-shout-muted px-2 py-0.5 rounded flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Private
+                </span>
+              )}
             </div>
             <div className="text-sm text-shout-muted truncate">
               {session.title || 'Untitled Session'}
@@ -264,7 +273,7 @@ export default function SessionViewerPage() {
                 <span className="hidden sm:inline text-xs">Share</span>
               </button>
 
-              {!isLive && (
+              {!isLive && !isPrivate && (
                 <>
                   <a
                     href={`${process.env.NEXT_PUBLIC_API_URL || ''}/api/sessions/${sessionId}/export`}
@@ -344,15 +353,28 @@ export default function SessionViewerPage() {
       </div>
 
       {/* Terminal */}
-      <Terminal
-        sessionId={sessionId}
-        isLive={isLive}
-        sessionTitle={session.title || undefined}
-        onViewerCountChange={handleViewerCountChange}
-        replayMode={!isLive}
-        onTerminalReady={handleTerminalReady}
-        onResizeReady={handleResizeReady}
-      />
+      {!isLive && isPrivate ? (
+        <div className="flex-1 bg-shout-bg flex items-center justify-center">
+          <div className="text-center px-4">
+            <svg className="w-10 h-10 text-shout-muted mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <p className="text-shout-muted text-sm">
+              This was a private session. No replay data was stored.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <Terminal
+          sessionId={sessionId}
+          isLive={isLive}
+          sessionTitle={session.title || undefined}
+          onViewerCountChange={handleViewerCountChange}
+          replayMode={!isLive}
+          onTerminalReady={handleTerminalReady}
+          onResizeReady={handleResizeReady}
+        />
+      )}
 
       {/* Player bar at bottom (ended sessions only) */}
       {!isLive && !replay.isLoading && replay.totalDuration > 0 && (

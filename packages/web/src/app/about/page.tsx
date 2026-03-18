@@ -27,6 +27,15 @@ export default function AboutPage() {
             as a <code className="bg-shout-surface px-1.5 py-0.5 rounded text-sm text-shout-text">.cast</code> file.
           </p>
 
+          <h2 className="text-lg font-semibold text-shout-text pt-4">Privacy</h2>
+
+          <p>
+            Sessions can be public, followers-only, or private. Private sessions are truly
+            live-only: viewers can watch with a direct link while the session is active, but
+            no replay data is stored. Once the session ends, it&apos;s gone. No recording, no
+            export, nothing persisted.
+          </p>
+
           <p>
             The CLI strips 25 categories of environment variables (API keys, tokens, database URLs)
             before the broadcast shell even starts. It&apos;s not foolproof, but it catches the common

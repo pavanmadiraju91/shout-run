@@ -71,11 +71,11 @@ Even if you run `env` or `printenv` mid-broadcast, those values won't appear. Th
 |------------|----------|
 | `public` | Listed on the live feed, anyone can watch |
 | `followers` | Visible only to your followers |
-| `private` | Unlisted, only people with the direct link |
+| `private` | Unlisted, only people with the direct link. Live-only: no replay or export after the session ends |
 
 ### Replay and late join
 
-Late joiners receive the last 100 chunks from a ring buffer so they catch up instantly. After a session ends, the full recording is available for replay and can be exported as asciicast v2 (`.cast`) files.
+Late joiners receive the last 100 chunks from a ring buffer so they catch up instantly. After a session ends, the full recording is available for replay and can be exported as asciicast v2 (`.cast`) files. Private sessions are live-only — no replay data is stored, and nothing is persisted after the session ends.
 
 ### Upvoting and live feed
 
