@@ -8,6 +8,7 @@ import { formatDistanceToNow, format } from 'date-fns';
 import { fetchUserSessions } from '@/lib/api';
 import { LiveBadge } from '@/components/LiveBadge';
 import { ViewerCount } from '@/components/ViewerCount';
+import { Footer } from '@/components/Footer';
 import type { Session } from '@shout/shared';
 
 interface UserSession extends Session {
@@ -183,6 +184,8 @@ export default function UserProfilePage() {
           </p>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 }

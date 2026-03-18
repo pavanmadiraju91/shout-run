@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'Terms of Service - shout',
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
+    <>
     <div className="max-w-3xl mx-auto px-4 py-16">
       <h1 className="text-4xl font-bold mb-2 text-shout-text">Terms of Service</h1>
       <p className="text-sm text-shout-muted mb-10">Last updated: March 2026</p>
@@ -193,5 +195,7 @@ export default function TermsPage() {
         </div>
       </div>
     </div>
+    <Footer />
+    </>
   );
 }

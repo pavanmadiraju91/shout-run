@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { FeedItem } from '@/components/FeedItem';
+import { Footer } from '@/components/Footer';
 
 type Tab = 'live' | 'recent';
 
@@ -247,26 +247,9 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Footer ─────────────────────────────────────── */}
-        <footer className="pb-8 pt-4 border-t border-shout-border">
-          <div className="flex items-center justify-center gap-4 text-xs text-shout-muted">
-            <Link href="/terms" className="hover:text-shout-text transition-colors">Terms</Link>
-            <span className="text-shout-border">|</span>
-            <Link href="/privacy" className="hover:text-shout-text transition-colors">Privacy</Link>
-            <span className="text-shout-border">|</span>
-            <Link href="/about" className="hover:text-shout-text transition-colors">About</Link>
-            <span className="text-shout-border">|</span>
-            <a
-              href="https://github.com/pavanmadiraju91/shout-run"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-shout-text transition-colors"
-            >
-              GitHub
-            </a>
-          </div>
-        </footer>
       </div>
+
+      <Footer />
     </>
   );
 }

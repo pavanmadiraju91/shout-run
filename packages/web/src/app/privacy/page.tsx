@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - shout',
@@ -7,6 +8,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
+    <>
     <div className="max-w-3xl mx-auto px-4 py-16">
       <h1 className="text-4xl font-bold text-shout-text mb-2">Privacy Policy</h1>
       <p className="text-sm text-shout-muted mb-10">Last updated: March 2026</p>
@@ -147,5 +149,7 @@ export default function PrivacyPage() {
           </Link>
         </div>
       </div>
+    <Footer />
+    </>
   );
 }
