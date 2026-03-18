@@ -17,11 +17,17 @@ pnpm typecheck            # type-check all packages
 pnpm clean                # remove all dist/node_modules
 
 # Per-package (use --filter)
-pnpm --filter @shout/shared build
-pnpm --filter @shout/cli build        # tsc + copies patterns/
-pnpm --filter @shout/worker dev       # wrangler dev
-pnpm --filter @shout/worker deploy    # wrangler deploy
-pnpm --filter @shout/web dev          # next dev on :3000
+pnpm --filter @shout/shared build   # tsc
+pnpm --filter @shout/cli build      # tsup (bundles shared)
+pnpm --filter @shout/sdk build      # tsup (bundles shared)
+pnpm --filter @shout/mcp build      # tsup (bundles shared, needs sdk built)
+pnpm --filter @shout/worker dev     # wrangler dev
+pnpm --filter @shout/worker deploy  # wrangler deploy
+pnpm --filter @shout/web dev        # next dev on :3000
+
+# Python packages
+cd packages/sdk-python && python -m build
+cd packages/mcp-python && python -m build
 ```
 
 There are no tests yet.
@@ -30,15 +36,21 @@ There are no tests yet.
 
 ```
 packages/
-  shared/   @shout/shared   — types, binary protocol, constants (build first)
-  cli/      @shout/cli      — Commander.js CLI (node-pty, secret redaction)
-  worker/   @shout/worker   — Cloudflare Workers + Durable Objects (Hono router)
-  web/      @shout/web      — Next.js 15 / React 19 frontend (xterm.js, Zustand)
+  shared/       @shout/shared   — types, binary protocol, constants (build first)
+  cli/          @shout/cli      — Commander.js CLI (node-pty, secret redaction)
+  worker/       @shout/worker   — Cloudflare Workers + Durable Objects (Hono router)
+  web/          @shout/web      — Next.js 15 / React 19 frontend (xterm.js, Zustand)
+  sdk/          @shout/sdk      — TypeScript SDK for programmatic broadcasting
+  mcp/          @shout/mcp      — MCP server for AI agents (TypeScript)
+  sdk-python/                   — Python SDK (PyPI: shout-run-sdk)
+  mcp-python/                   — Python MCP server (PyPI: shout-run-mcp)
 ```
 
 ### Data flow
 
 CLI captures PTY output → redacts secrets → encodes binary frames → WebSocket to Worker → SessionHub Durable Object fans out to viewer WebSockets → Web app decodes frames into xterm.js.
+
+SDK and MCP packages provide the same broadcast capability programmatically (TypeScript and Python).
 
 ### Binary WebSocket protocol (`packages/shared/src/protocol.ts`)
 
@@ -62,7 +74,7 @@ Dual enforcement: CLI and SessionHub both cap at `100 KB/s` (`DEFAULT_RATE_LIMIT
 
 ### Worker routing (`packages/worker/src/index.ts`)
 
-Hono app. Auth routes in `routes/auth.ts` (GitHub device flow proxy), session routes in `routes/sessions.ts`. JWT auth via Web Crypto API. Database is Turso (libSQL) with Drizzle ORM, schema in `lib/db.ts` (users, sessions, follows tables).
+Hono app. Auth routes in `routes/auth.ts` (GitHub device flow proxy), session routes in `routes/sessions.ts`, API key routes in `routes/keys.ts`, oEmbed in `routes/oembed.ts`. JWT auth via Web Crypto API. API key auth for SDK/MCP in `lib/api-keys.ts`. Database is Turso (libSQL) with Drizzle ORM, schema in `lib/db.ts` (users, sessions, follows tables).
 
 Key session endpoints in `routes/sessions.ts`: `POST /api/sessions` (create, rate-limited), `GET .../live` and `.../recent` (public feeds sorted by upvotes), `POST .../:id/upvote` (anonymous — accepts `voterId`, deduped via KV), `GET .../:id/replay` (streams chunks from DO/R2 fallback chain), `GET .../:id/export` (asciicast v2 `.cast` download), `GET .../:id/ws/broadcaster` and `.../ws/viewer` (WebSocket upgrades).
 
@@ -72,7 +84,7 @@ Key session endpoints in `routes/sessions.ts`: `POST /api/sessions` (create, rat
 
 ### Web app (`packages/web/`)
 
-Next.js App Router. Routes: `/` (homepage with hero, HN-style tabbed feed with upvoting), `/about`, `/[username]` (profile + session tabs), `/[username]/[sessionId]` (viewer). Zustand for client state.
+Next.js App Router. Routes: `/` (homepage with hero, HN-style tabbed feed with upvoting), `/about`, `/[username]` (profile + session tabs), `/[username]/[sessionId]` (viewer), `/embed/[sessionId]` (iframe-embeddable viewer), `/privacy`, `/terms`. Zustand for client state.
 
 Terminal and PlayerBar are `next/dynamic` with `ssr: false` (xterm.js needs browser APIs). Theme system: `ThemeProvider` stores `'dark' | 'light'` in `localStorage('shout-theme')`, sets `data-theme` attribute on `<html>`. CSS variables (`--shout-bg`, `--shout-surface`, `--shout-text`, `--shout-accent`, etc.) defined in `globals.css` for both themes. Tailwind maps these via `shout-*` utility classes (e.g., `bg-shout-surface`) in `tailwind.config.ts`.
 
@@ -86,13 +98,23 @@ Copy `.env.example` (root) and `packages/web/.env.local.example`. Key vars: `NEX
 
 ## Deployment
 
-CI (`.github/workflows/ci.yml`): lint + typecheck + build on PRs and pushes to main. Worker auto-deploys on push to main when `packages/worker/**` or `packages/shared/**` change (`deploy-worker.yml`, uses `cloudflare/wrangler-action@v3`). Web deploys to Vercel on push to main when `packages/web/**` or `packages/shared/**` change (`deploy-web.yml`). CLI publishes to npm on `cli-v*` tags (`publish-cli.yml` — extracts version from tag, verifies match with `package.json`, runs `pnpm publish`).
+CI (`.github/workflows/ci.yml`): lint + typecheck + build on PRs and pushes to main. Worker auto-deploys on push to main when `packages/worker/**` or `packages/shared/**` change (`deploy-worker.yml`, uses `cloudflare/wrangler-action@v3`). Web deploys to Vercel automatically via Git integration (no GitHub Action). Publishing to registries uses tag-triggered workflows:
+
+| Package | Tag | Registry | Workflow |
+|---------|-----|----------|----------|
+| CLI | `cli-v*` | npm (`shout-run`) | `publish-cli.yml` |
+| SDK | `sdk-v*` | npm (`shout-run-sdk`) | `publish-sdk.yml` |
+| MCP | `mcp-v*` | npm (`shout-run-mcp`) | `publish-mcp.yml` |
+| SDK Python | `sdk-python-v*` | PyPI (`shout-run-sdk`) | `publish-sdk-python.yml` |
+| MCP Python | `mcp-python-v*` | PyPI (`shout-run-mcp`) | `publish-mcp-python.yml` |
 
 ## Key conventions
 
-- **pnpm monorepo** with Turborepo — shared must build before cli/worker/web
+- **pnpm monorepo** with Turborepo — shared must build before all other TS packages
 - **ESM throughout** — all packages use `"type": "module"`, imports need `.js` extensions in TypeScript
+- **tsup** bundles CLI, SDK, and MCP — they inline `@shout/shared` via `noExternal`
 - **Worker build** uses `wrangler deploy --dry-run --outdir=dist` (not tsc)
 - **Web** uses `next.config.js` with `transpilePackages: ['@shout/shared']`
+- **Python packages** use hatchling for builds, Python >= 3.10
 - **Worker secrets** are set via `wrangler secret put`, not in wrangler.toml
 - **Prettier**: semicolons, single quotes, trailing commas, 100 char width

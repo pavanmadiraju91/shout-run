@@ -25,6 +25,8 @@ export enum FrameType {
   Error = 0x07,
   /** Resize event (cols, rows) */
   Resize = 0x08,
+  /** Terminal state snapshot for late-joining viewers */
+  Snapshot = 0x09,
 }
 
 // ── Encoder ──────────────────────────────────────────────────
@@ -124,4 +126,8 @@ export function encodePong(): Uint8Array {
 
 export function encodeErrorFrame(message: string): Uint8Array {
   return encodeFrame(FrameType.Error, message, 0);
+}
+
+export function encodeSnapshotFrame(data: Uint8Array): Uint8Array {
+  return encodeFrame(FrameType.Snapshot, data, 0);
 }

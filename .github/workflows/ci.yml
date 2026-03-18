@@ -86,11 +86,22 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build shared
         run: pnpm --filter @shout/shared run build
+
+      - name: Build vt-wasm
+        run: pnpm --filter @shout/vt-wasm run build
 
       - name: Build CLI
         run: pnpm --filter @shout/cli run build
@@ -100,6 +111,9 @@ jobs:
 
       - name: Build MCP
         run: pnpm --filter @shout/mcp run build
+
+      - name: Build Worker
+        run: pnpm --filter @shout/worker run build
 
       - name: Build Web
         run: pnpm --filter @shout/web run build

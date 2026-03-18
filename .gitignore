@@ -12,3 +12,8 @@ coverage/
 *.log
 .DS_Store
 .vercel
+
+# Rust / WASM build artifacts
+packages/vt-wasm/pkg/
+packages/vt-wasm/target/
+packages/worker/src/lib/vt-wasm/

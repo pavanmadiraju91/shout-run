@@ -7,6 +7,7 @@ on:
     paths:
       - 'packages/worker/**'
       - 'packages/shared/**'
+      - 'packages/vt-wasm/**'
       - '.github/workflows/deploy-worker.yml'
 
 concurrency:
@@ -34,8 +35,19 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
       - name: Build shared package
         run: pnpm --filter @shout/shared build
+
+      - name: Build vt-wasm
+        run: pnpm --filter @shout/vt-wasm build
 
       - name: Build worker
         run: pnpm --filter @shout/worker build

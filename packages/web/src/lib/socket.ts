@@ -83,6 +83,11 @@ export function createSocket(sessionId: string, callbacks: SocketCallbacks): Soc
           // Session metadata - could be used for title updates
           break;
 
+        case FrameType.Snapshot:
+          // Snapshot contains ANSI escape sequences that reconstruct the terminal screen
+          callbacks.onOutput(payloadToString(frame.payload));
+          break;
+
         default:
           // Unknown frame type, ignore
           break;

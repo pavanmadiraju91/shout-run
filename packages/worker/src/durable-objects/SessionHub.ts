@@ -1,9 +1,11 @@
 import type { Env } from '../env.js';
 import {
   decodeFrame,
+  decodeResize,
   encodeEndFrame,
   encodeOutputFrame,
   encodeResizeFrame,
+  encodeSnapshotFrame,
   encodeViewerCountFrame,
   encodeMetaFrame,
   encodePing,
@@ -14,6 +16,8 @@ import {
 } from '@shout/shared';
 import { createDb, sessions } from '../lib/db.js';
 import { eq } from 'drizzle-orm';
+
+import { VtParser } from '../lib/vt-wasm/vt_wasm.js';
 
 /** Maximum bytes to accumulate in allChunks for replay (50 MB). */
 const MAX_REPLAY_BYTES = 50 * 1024 * 1024;
@@ -41,6 +45,9 @@ export class SessionHub implements DurableObject {
 
   // Last Resize frame for late-joining viewers (so xterm.js gets correct dimensions)
   private lastResizeFrame: Uint8Array | null = null;
+
+  // Virtual terminal parser for generating screen snapshots for late joiners
+  private vtParser: VtParser | null = null;
 
   private allChunks: Uint8Array[] = [];
   private allChunksBytes = 0;
@@ -176,8 +183,17 @@ export class SessionHub implements DurableObject {
       server.send(this.lastResizeFrame);
     }
 
-    // No output replay — late joiners see live output from the moment they connect.
-    // Full replay is available after the session ends.
+    // Send terminal state snapshot for late joiners
+    if (this.vtParser) {
+      try {
+        const snapshot: Uint8Array = this.vtParser.state_formatted();
+        if (snapshot.length > 0) {
+          server.send(encodeSnapshotFrame(snapshot));
+        }
+      } catch (err) {
+        console.error('Error generating snapshot:', err);
+      }
+    }
 
     // Update and broadcast viewer count
     this.broadcastViewerCount();
@@ -229,6 +245,19 @@ export class SessionHub implements DurableObject {
         // Track latest Resize frame for late-joining viewers
         if (frame.type === FrameType.Resize) {
           this.lastResizeFrame = bytes.slice();
+
+          // Create or resize the virtual terminal parser
+          const { cols, rows } = decodeResize(frame.payload);
+          if (this.vtParser) {
+            this.vtParser.resize(rows, cols);
+          } else {
+            this.vtParser = new VtParser(rows, cols);
+          }
+        }
+
+        // Feed terminal output to the virtual terminal parser
+        if (frame.type === FrameType.Output && this.vtParser) {
+          this.vtParser.process(frame.payload);
         }
 
         // Store all chunks for persistence (up to memory cap) — skip for private sessions
@@ -280,6 +309,7 @@ export class SessionHub implements DurableObject {
 
   private async handleBroadcasterClose(): Promise<void> {
     this.broadcaster = null;
+    this.vtParser = null;
 
     // Send end frame to all viewers
     const endFrame = encodeEndFrame();
