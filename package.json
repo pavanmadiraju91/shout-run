@@ -21,6 +21,11 @@
     "test": "turbo test",
     "test:ci": "turbo test -- --coverage"
   },
+  "pnpm": {
+    "overrides": {
+      "flatted": ">=3.4.2"
+    }
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^4.1.0",
