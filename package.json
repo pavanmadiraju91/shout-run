@@ -17,11 +17,15 @@
     "dev": "turbo dev",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
-    "clean": "turbo clean"
+    "clean": "turbo clean",
+    "test": "turbo test",
+    "test:ci": "turbo test -- --coverage"
   },
   "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.0",
     "turbo": "^2.3.0",
     "typescript": "^5.7.0",
-    "@types/node": "^22.0.0"
+    "vitest": "^4.1.0"
   }
 }

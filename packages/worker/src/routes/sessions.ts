@@ -3,6 +3,7 @@ import { eq, desc, and, gte, sql } from 'drizzle-orm';
 import type { Env } from '../env.js';
 import { createDb, sessions, users, generateId } from '../lib/db.js';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
+import { sanitizeTitle, sanitizeDescription, sanitizeTags, validateVisibility } from '../lib/validation.js';
 import type {
   ApiResponse,
   CreateSessionRequest,
@@ -20,21 +21,15 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
   const body = await c.req.json<CreateSessionRequest>().catch(() => ({} as Partial<CreateSessionRequest>));
 
   // --- Input validation ---
-  const VALID_VISIBILITIES = ['public', 'followers', 'private'] as const;
-  const visibility = body.visibility ?? 'public';
-  if (!VALID_VISIBILITIES.includes(visibility as (typeof VALID_VISIBILITIES)[number])) {
+  const visibility = validateVisibility(body.visibility);
+  if (visibility === null) {
     return c.json<ApiResponse>({ ok: false, error: 'Invalid visibility value' }, 400);
   }
 
-  let title = body.title ?? `${user.username}'s session`;
-  // Strip control characters and clamp length
-  title = title.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 256);
+  const title = sanitizeTitle(body.title ?? `${user.username}'s session`);
 
   // Sanitize description
-  let description: string | null = null;
-  if (body.description) {
-    description = body.description.replace(/[\x00-\x1f\x7f]/g, '').slice(0, 500) || null;
-  }
+  const description = body.description ? sanitizeDescription(body.description) : null;
 
   let tags: string[] = [];
   if (body.tags) {
@@ -44,7 +39,7 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
     if (body.tags.length > 5) {
       return c.json<ApiResponse>({ ok: false, error: 'Maximum 5 tags allowed' }, 400);
     }
-    tags = body.tags.map((t) => t.slice(0, 32));
+    tags = sanitizeTags(body.tags);
   }
 
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);

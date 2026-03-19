@@ -19,35 +19,8 @@ import {
 import { getToken } from '../lib/auth.js';
 import { login } from './login.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
-
-/** Env var prefixes that should never be exposed to a broadcast shell. */
-const SENSITIVE_ENV_PREFIXES = [
-  'AWS_SECRET',
-  'AWS_SESSION_TOKEN',
-  'DATABASE_URL',
-  'GITHUB_TOKEN',
-  'GH_TOKEN',
-  'NPM_TOKEN',
-  'NODE_AUTH_TOKEN',
-  'OPENAI_API_KEY',
-  'ANTHROPIC_API_KEY',
-  'STRIPE_SECRET',
-  'PRIVATE_KEY',
-  'SECRET_KEY',
-  'ENCRYPTION_KEY',
-  'JWT_SECRET',
-  'SESSION_SECRET',
-  'COOKIE_SECRET',
-  'TURSO_AUTH_TOKEN',
-  'CLOUDFLARE_API_TOKEN',
-  'SENTRY_AUTH_TOKEN',
-  'SLACK_TOKEN',
-  'SLACK_BOT_TOKEN',
-  'DISCORD_TOKEN',
-  'TWILIO_AUTH_TOKEN',
-  'SENDGRID_API_KEY',
-  'MAILGUN_API_KEY',
-];
+import { formatDuration, formatBytes } from '../lib/format.js';
+import { stripSensitiveEnv } from '../lib/env.js';
 
 const API_BASE = process.env.SHOUT_API_URL ?? 'https://api.shout.run';
 
@@ -61,26 +34,6 @@ interface BroadcastStats {
   bytesSent: number;
   viewerCount: number;
   startTime: number;
-}
-
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000) % 60;
-  const minutes = Math.floor(ms / 60000) % 60;
-  const hours = Math.floor(ms / 3600000);
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${seconds}s`;
-  }
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-  return `${seconds}s`;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 async function createSession(
@@ -369,14 +322,7 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     const rows = process.stdout.rows || 24;
 
     // Filter out undefined env values and strip known sensitive vars
-    const cleanEnv: Record<string, string> = {};
-    for (const [key, val] of Object.entries(process.env)) {
-      if (val === undefined) continue;
-      const upper = key.toUpperCase();
-      if (SENSITIVE_ENV_PREFIXES.some((prefix) => upper.startsWith(prefix))) continue;
-      cleanEnv[key] = val;
-    }
-    cleanEnv.SHOUT_SESSION = '1';
+    const cleanEnv = stripSensitiveEnv(process.env);
 
     const ptyProcess = pty.spawn(shell, [], {
       name: 'xterm-256color',
