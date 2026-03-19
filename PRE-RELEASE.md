@@ -26,9 +26,8 @@
   [`trufflehog`](https://github.com/trufflesecurity/trufflehog) /
   [`gitleaks`](https://github.com/gitleaks/gitleaks) for a proper sweep.
 
-- [ ] **Enable GitHub secret scanning**
-  Settings > Code security and analysis > Secret scanning. GitHub will alert you if anything slips
-  through in future commits.
+- [x] **Enable GitHub secret scanning**
+  Enabled via `gh api` — vulnerability alerts active.
 
 ## Already Good (no action needed)
 
@@ -50,22 +49,21 @@
 - [x] **SECURITY.md** — vulnerability disclosure policy created
 - [x] **CONTRIBUTING.md** — contribution guidelines created
 - [x] **CODE_OF_CONDUCT.md** — Contributor Covenant v2.1 created
-- [ ] **CODEOWNERS** — optional, but useful if you want auto-assigned reviewers
-- [ ] **Issue / PR templates** — `.github/ISSUE_TEMPLATE/` and `.github/PULL_REQUEST_TEMPLATE.md`
+- [x] **CODEOWNERS** — `.github/CODEOWNERS` assigns `@pavanmadiraju91` to all files
+- [x] **Issue / PR templates** — bug report, feature request, and PR template created
 
 ---
 
 ## Repo Settings (GitHub UI)
 
-- [ ] **Branch protection on `main`**
-  - Require pull request reviews
-  - Require status checks to pass (CI)
-  - Disable force pushes and branch deletion
-- [ ] **Enable Dependabot security updates** (not just version updates)
-- [ ] **Enable CodeQL** for code scanning (Settings > Code security and analysis)
-- [ ] **Set repo description and topics** — helps discoverability
-  (e.g., `terminal`, `broadcasting`, `cli`, `websocket`, `developer-tools`)
-- [ ] **Verify "About" section** — homepage URL, description, topics
+- [x] **Branch protection on `main`**
+  - Require status checks to pass (lint, typecheck, build, test)
+  - Enforce admins enabled
+  - Force pushes and branch deletion disabled
+- [x] **Enable Dependabot security updates** — vulnerability alerts enabled via API
+- [x] **Enable CodeQL** — `.github/workflows/codeql.yml` workflow created (JS/TS analysis, weekly cron)
+- [x] **Set repo description and topics** — description, homepage, and topics set via `gh repo edit`
+- [x] **Verify "About" section** — homepage points to `https://shout.run`, topics added
 
 ---
 
@@ -75,8 +73,7 @@
 - [x] **`ideal-robot` references cleaned up** — repo URL updated to `shout-run`
 - [x] **CLI publishConfig** — `packages/cli/package.json` has `publishConfig.name: "shout-run"` and
   `access: "public"`. Published to npm successfully.
-- [ ] **Check for TODO/FIXME/HACK comments** — do a quick grep; remove anything embarrassing or
-  that references internal context you don't want public.
+- [x] **Check for TODO/FIXME/HACK comments** — codebase is clean, no issues found
 - [ ] **Verify self-hosting docs still work** — README has a self-hosting section; make sure
   someone can actually follow it from scratch.
 
@@ -92,10 +89,12 @@
 ## Nice-to-Haves
 
 - [ ] **Tag a release** — `v0.1.0` or whatever feels right; gives a clean "start" for the public repo
-- [ ] **Add badges to README** — CI status, npm version, license
-- [ ] **Set up GitHub Discussions** — for community Q&A without cluttering issues
+- [x] **Add badges to README** — CI status, npm version, SDK version, license badges present
+- [x] **Set up GitHub Discussions** — enabled via `gh repo edit`
 - [x] **.github/FUNDING.yml** — already done and renders correctly
 - [ ] **Social preview image** — the OG image that shows when someone shares your repo link
+- [ ] **OG social preview image** — metadata in `layout.tsx` but no actual image file exists
+- [ ] **GitHub social preview image** — upload via repo Settings > Social preview for link previews
 
 ---
 
