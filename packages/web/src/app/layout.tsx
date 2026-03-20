@@ -10,11 +10,11 @@ export const metadata: Metadata = {
   description:
     'Watch developers code in real-time. Share your terminal with the world. The live streaming platform for developers.',
   keywords: ['terminal', 'live coding', 'developer tools', 'streaming', 'pair programming'],
-  authors: [{ name: 'shout.dev' }],
+  authors: [{ name: 'shout' }],
   openGraph: {
     title: 'shout - Watch developers work. Live.',
     description: 'Watch developers code in real-time. Share your terminal with the world.',
-    url: 'https://shout.dev',
+    url: 'https://shout.run',
     siteName: 'shout',
     type: 'website',
   },

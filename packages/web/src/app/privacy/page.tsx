@@ -92,9 +92,9 @@ export default function PrivacyPage() {
             <li>View all your data on your profile page</li>
             <li>Export recordings as .cast files (asciicast v2 format)</li>
             <li>
-              Request account deletion by contacting{' '}
-              <a href="mailto:privacy@shout.run" className="text-shout-accent hover:underline">
-                privacy@shout.run
+              Request account deletion by opening an issue on{' '}
+              <a href="https://github.com/pavanmadiraju91/shout-run/issues" target="_blank" rel="noopener noreferrer" className="text-shout-accent hover:underline">
+                GitHub
               </a>
             </li>
             <li>GDPR: Right to erasure and data portability</li>
@@ -129,10 +129,10 @@ export default function PrivacyPage() {
         <section className="mb-12">
           <h2 className="text-2xl font-semibold text-shout-text mb-4">Contact</h2>
           <p className="text-shout-muted">
-            For privacy-related inquiries, contact us at{' '}
-            <a href="mailto:privacy@shout.run" className="text-shout-accent hover:underline">
-              privacy@shout.run
-            </a>
+            For privacy-related inquiries, open an issue on{' '}
+            <a href="https://github.com/pavanmadiraju91/shout-run/issues" target="_blank" rel="noopener noreferrer" className="text-shout-accent hover:underline">
+              GitHub
+            </a>.
           </p>
         </section>
 

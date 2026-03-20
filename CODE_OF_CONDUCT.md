@@ -59,8 +59,8 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported via GitHub's Private Vulnerability Reporting or by email at
-conduct@shout.run.
+reported via [GitHub's Private Vulnerability Reporting](https://github.com/pavanmadiraju91/shout-run/security/advisories/new)
+or by [opening a GitHub issue](https://github.com/pavanmadiraju91/shout-run/issues).
 
 All complaints will be reviewed and investigated promptly and fairly.
 
