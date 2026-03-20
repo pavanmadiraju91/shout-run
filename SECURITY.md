@@ -19,7 +19,7 @@ Use [GitHub's Private Vulnerability Reporting](https://github.com/pavanmadiraju9
 
 ### Alternative Contact
 
-If you are unable to use GitHub's reporting feature, email **security@shout.run** with details of the vulnerability.
+If you are unable to use GitHub's reporting feature, open a regular [GitHub issue](https://github.com/pavanmadiraju91/shout-run/issues) with minimal details and we'll follow up privately.
 
 ## Response Timeline
 

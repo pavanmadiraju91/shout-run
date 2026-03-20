@@ -162,9 +162,9 @@ export default function TermsPage() {
         <section>
           <h2 className="text-xl font-semibold text-shout-text mb-3">11. Contact</h2>
           <p>
-            For questions about these Terms, contact us at{' '}
-            <a href="mailto:legal@shout.run" className="text-shout-accent hover:underline">
-              legal@shout.run
+            For questions about these Terms, open an issue on{' '}
+            <a href="https://github.com/pavanmadiraju91/shout-run/issues" target="_blank" rel="noopener noreferrer" className="text-shout-accent hover:underline">
+              GitHub
             </a>.
           </p>
         </section>
