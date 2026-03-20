@@ -252,6 +252,31 @@ class ShoutSession:
 
         self._set_state(SessionState.ENDED)
 
+    @staticmethod
+    def delete_session(api_key: str, session_id: str, *, api_url: str = 'https://api.shout.run') -> None:
+        """Delete an ended session. Only the session owner can delete it.
+
+        Args:
+            api_key: API key for authentication.
+            session_id: The session ID to delete.
+            api_url: API base URL (default: https://api.shout.run).
+
+        Raises:
+            RuntimeError: If the delete request fails.
+        """
+        api_url = api_url.rstrip('/')
+        resp = requests.delete(
+            f'{api_url}/api/sessions/{session_id}',
+            headers={'Authorization': f'Bearer {api_key}'},
+            timeout=10,
+        )
+        if not resp.ok:
+            try:
+                error = resp.json().get('error', str(resp.status_code))
+            except Exception:
+                error = str(resp.status_code)
+            raise RuntimeError(f'Failed to delete session: {error}')
+
     def __enter__(self) -> 'ShoutSession':
         return self
 

@@ -55,6 +55,7 @@ Add to `.cursor/mcp.json`:
 | `shout_write` | Send terminal output to viewers |
 | `shout_end_broadcast` | End the active broadcast |
 | `shout_broadcast_status` | Check broadcast status and viewer count |
+| `shout_delete_session` | Delete an ended session you own (permanent) |
 
 ## Getting an API Key
 

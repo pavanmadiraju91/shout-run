@@ -30,7 +30,7 @@ cd packages/sdk-python && python -m build
 cd packages/mcp-python && python -m build
 ```
 
-There are no tests yet.
+Worker has Vitest tests: `pnpm --filter @shout/worker test`.
 
 ## Architecture
 
@@ -76,7 +76,7 @@ Dual enforcement: CLI and SessionHub both cap at `100 KB/s` (`DEFAULT_RATE_LIMIT
 
 Hono app. Auth routes in `routes/auth.ts` (GitHub device flow proxy), session routes in `routes/sessions.ts`, API key routes in `routes/keys.ts`, oEmbed in `routes/oembed.ts`. JWT auth via Web Crypto API. API key auth for SDK/MCP in `lib/api-keys.ts`. Database is Turso (libSQL) with Drizzle ORM, schema in `lib/db.ts` (users, sessions, follows tables).
 
-Key session endpoints in `routes/sessions.ts`: `POST /api/sessions` (create, rate-limited), `GET .../live` and `.../recent` (public feeds sorted by upvotes), `POST .../:id/upvote` (anonymous — accepts `voterId`, deduped via KV), `GET .../:id/replay` (streams chunks from DO/R2 fallback chain), `GET .../:id/export` (asciicast v2 `.cast` download), `GET .../:id/ws/broadcaster` and `.../ws/viewer` (WebSocket upgrades).
+Key session endpoints in `routes/sessions.ts`: `POST /api/sessions` (create, rate-limited), `GET .../live` and `.../recent` (public feeds sorted by upvotes), `POST .../:id/upvote` (anonymous — accepts `voterId`, deduped via KV), `DELETE .../:id` (soft-delete, sets `status='deleted'`), `GET .../:id/replay` (streams chunks from DO/R2 fallback chain), `GET .../:id/export` (asciicast v2 `.cast` download), `GET .../:id/ws/broadcaster` and `.../ws/viewer` (WebSocket upgrades).
 
 ### CLI auth flow
 

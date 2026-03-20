@@ -152,6 +152,30 @@ async def shout_broadcast_status() -> str:
     )
 
 
+@mcp.tool()
+async def shout_delete_session(session_id: str) -> str:
+    """Delete a broadcast session. Only works on ended sessions you own. This is permanent.
+
+    Args:
+        session_id: The session ID to delete.
+    """
+    api_key = _get_api_key()
+    if not api_key:
+        return "Error: SHOUT_API_KEY environment variable is not set."
+
+    try:
+        await asyncio.to_thread(
+            ShoutSession.delete_session,
+            api_key,
+            session_id,
+            api_url=_get_api_url(),
+        )
+    except Exception as e:
+        return f"Failed to delete session: {e}"
+
+    return f"Session {session_id} deleted."
+
+
 def main():
     """Entry point for the shout-mcp command."""
     mcp.run()
