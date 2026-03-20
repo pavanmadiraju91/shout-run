@@ -220,7 +220,7 @@ async function endActiveSession(): Promise<string | null> {
 
 const server = new McpServer({
   name: 'shout',
-  version: '0.1.0',
+  version: '0.1.3',
 });
 
 server.tool(
