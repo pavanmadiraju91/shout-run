@@ -28,8 +28,11 @@ async function ensureWasm(): Promise<void> {
   }
 }
 
-/** Maximum bytes to accumulate in allChunks for replay (50 MB). */
-const MAX_REPLAY_BYTES = 50 * 1024 * 1024;
+/** JSON chunk format used in replay storage and API responses. */
+type ReplayChunk = { type: string; data: string; timestamp: number; cols?: number; rows?: number };
+
+/** Max parts to consolidate into a single replay.json (~100 MB at ~3 MB/part). */
+const MAX_CONSOLIDATION_PARTS = 33;
 
 interface SessionState {
   sessionId: string;
@@ -39,6 +42,11 @@ interface SessionState {
   description?: string;
   visibility?: 'public' | 'followers' | 'private';
   startedAt: number;
+}
+
+interface R2FlushState {
+  flushedPartCount: number;
+  totalFlushedChunks: number;
 }
 
 export class SessionHub implements DurableObject {
@@ -58,13 +66,13 @@ export class SessionHub implements DurableObject {
   // Virtual terminal parser for generating screen snapshots for late joiners
   private vtParser: VtParser | null = null;
 
-  private allChunks: Uint8Array[] = [];
-  private allChunksBytes = 0;
-  private replayCapReached = false;
+  // Pending buffer — flushed to R2 every 30s by alarm
+  private pendingChunks: Uint8Array[] = [];
+  private pendingChunksBytes = 0;
 
-  // Tracks how many chunks from allChunks have already been flushed to DO storage.
-  // After hibernation wake, allChunks is empty but storage has the persisted data.
-  private flushedChunkCount = 0;
+  // R2 flush tracking — persisted to DO storage for crash recovery
+  private flushedPartCount = 0;
+  private totalFlushedChunks = 0;
 
   // Rate limiting
   private bytesThisSecond = 0;
@@ -87,6 +95,15 @@ export class SessionHub implements DurableObject {
     this.state.getWebSockets('viewer').forEach((ws) => {
       this.viewers.add(ws);
     });
+
+    // Restore R2 flush state from DO storage (survives hibernation)
+    this.state.blockConcurrencyWhile(async () => {
+      const saved = await this.state.storage.get<R2FlushState>('r2FlushState');
+      if (saved) {
+        this.flushedPartCount = saved.flushedPartCount;
+        this.totalFlushedChunks = saved.totalFlushedChunks;
+      }
+    });
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -108,7 +125,7 @@ export class SessionHub implements DurableObject {
 
     // Explicit end from API (CLI shutdown fallback)
     if (path === '/end' && request.method === 'POST') {
-      await this.persistReplayToStorage();
+      await this.flushPendingToR2();
       return new Response('OK', { status: 200 });
     }
 
@@ -271,14 +288,10 @@ export class SessionHub implements DurableObject {
           this.vtParser.process(frame.payload);
         }
 
-        // Store all chunks for persistence (up to memory cap) — skip for private sessions
-        if (!this.replayCapReached && this.sessionState?.visibility !== 'private') {
-          if (this.allChunksBytes + bytes.byteLength > MAX_REPLAY_BYTES) {
-            this.replayCapReached = true;
-          } else {
-            this.allChunks.push(bytes);
-            this.allChunksBytes += bytes.byteLength;
-          }
+        // Buffer chunks for R2 persistence — skip for private sessions
+        if (this.sessionState?.visibility !== 'private') {
+          this.pendingChunks.push(bytes);
+          this.pendingChunksBytes += bytes.byteLength;
         }
       }
 
@@ -334,11 +347,12 @@ export class SessionHub implements DurableObject {
     }
     this.viewers.clear();
 
-    // Persist replay data to DO storage (survives eviction)
-    await this.persistReplayToStorage();
+    // Flush remaining pending chunks to R2
+    await this.flushPendingToR2();
 
-    // Persist session to R2 (if enabled)
-    await this.persistSession();
+    // Write manifest and consolidate replay
+    await this.writeManifest();
+    await this.consolidateReplay();
 
     // Update session status in database
     if (this.sessionState) {
@@ -357,93 +371,71 @@ export class SessionHub implements DurableObject {
     }
   }
 
-  private broadcastViewerCount(): void {
-    const count = this.viewers.size;
-    const frame = encodeViewerCountFrame(count);
+  // ── R2 Batch Flushing ────────────────────────────────────────
 
-    // Send to broadcaster if connected
-    if (this.broadcaster) {
-      try {
-        this.broadcaster.send(frame);
-      } catch {
-        // Broadcaster disconnected
-      }
-    }
-
-    // Send to all viewers
-    for (const viewer of this.viewers) {
-      try {
-        viewer.send(frame);
-      } catch {
-        // Viewer disconnected
-      }
-    }
-
-    // Update viewer count in database
-    this.updateViewerCountInDb(count);
-  }
-
-  private async updateViewerCountInDb(count: number): Promise<void> {
+  /**
+   * Convert pending binary frames to JSON and write as a numbered part to R2.
+   * Called every 30s by the alarm and on session end.
+   */
+  async flushPendingToR2(): Promise<void> {
+    if (this.sessionState?.visibility === 'private') return;
+    if (this.pendingChunks.length === 0) return;
+    if (!this.env.SESSIONS_BUCKET) return;
     if (!this.sessionState) return;
 
+    const chunks = this.convertBinaryToJson(this.pendingChunks);
+    if (chunks.length === 0) {
+      this.pendingChunks = [];
+      this.pendingChunksBytes = 0;
+      return;
+    }
+
+    const partKey = `sessions/${this.sessionState.sessionId}/part-${String(this.flushedPartCount).padStart(6, '0')}.json`;
+
     try {
-      const db = createDb(this.env.TURSO_URL, this.env.TURSO_AUTH_TOKEN);
-      await db
-        .update(sessions)
-        .set({ viewerCount: count })
-        .where(eq(sessions.id, this.sessionState.sessionId));
+      await this.env.SESSIONS_BUCKET.put(partKey, JSON.stringify({ chunks }), {
+        httpMetadata: { contentType: 'application/json' },
+      });
+
+      this.totalFlushedChunks += chunks.length;
+      this.flushedPartCount++;
+      this.pendingChunks = [];
+      this.pendingChunksBytes = 0;
+
+      // Persist flush state for crash recovery
+      await this.state.storage.put<R2FlushState>('r2FlushState', {
+        flushedPartCount: this.flushedPartCount,
+        totalFlushedChunks: this.totalFlushedChunks,
+      });
     } catch (err) {
-      console.error('Error updating viewer count:', err);
+      // Keep chunks in memory — retry on next alarm
+      console.error('Error flushing to R2:', err);
     }
   }
 
-  private async persistSession(): Promise<void> {
+  /**
+   * Write manifest.json and meta.json to R2 after session ends.
+   */
+  private async writeManifest(): Promise<void> {
     if (this.sessionState?.visibility === 'private') return;
-    if (!this.sessionState || this.allChunks.length === 0) return;
-    if (!this.env.SESSIONS_BUCKET) return; // R2 not enabled
+    if (!this.env.SESSIONS_BUCKET) return;
+    if (!this.sessionState) return;
+    if (this.flushedPartCount === 0) return;
+
+    const prefix = `sessions/${this.sessionState.sessionId}`;
 
     try {
-      // Convert binary frames to JSON chunks (same format as DO storage replayChunks)
-      const chunks: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
-      for (const raw of this.allChunks) {
-        try {
-          const frame = decodeFrame(raw);
-          if (frame.type === FrameType.Output) {
-            const text = new TextDecoder().decode(frame.payload);
-            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp });
-          } else if (frame.type === FrameType.Resize) {
-            const view = new DataView(
-              frame.payload.buffer,
-              frame.payload.byteOffset,
-              frame.payload.byteLength,
-            );
-            chunks.push({
-              type: 'resize',
-              data: '',
-              timestamp: frame.timestamp,
-              cols: view.getUint16(0),
-              rows: view.getUint16(2),
-            });
-          }
-        } catch {
-          // Skip corrupt frames
-        }
-      }
-
-      if (chunks.length === 0) return;
-
-      // Store replay data as JSON (readable by handleReplay without binary parsing)
       await this.env.SESSIONS_BUCKET.put(
-        `sessions/${this.sessionState.sessionId}.json`,
-        JSON.stringify({ chunks }),
-        {
-          httpMetadata: { contentType: 'application/json' },
-        },
+        `${prefix}/manifest.json`,
+        JSON.stringify({
+          partCount: this.flushedPartCount,
+          totalChunks: this.totalFlushedChunks,
+        }),
+        { httpMetadata: { contentType: 'application/json' } },
       );
 
-      // Store session metadata
       await this.env.SESSIONS_BUCKET.put(
-        `sessions/${this.sessionState.sessionId}.meta.json`,
+        `${prefix}/meta.json`,
         JSON.stringify({
           sessionId: this.sessionState.sessionId,
           userId: this.sessionState.userId,
@@ -451,71 +443,146 @@ export class SessionHub implements DurableObject {
           title: this.sessionState.title,
           startedAt: this.sessionState.startedAt,
           endedAt: Date.now(),
-          chunkCount: chunks.length,
+          chunkCount: this.totalFlushedChunks,
+          partCount: this.flushedPartCount,
         }),
-        {
-          httpMetadata: { contentType: 'application/json' },
-        },
+        { httpMetadata: { contentType: 'application/json' } },
       );
     } catch (err) {
-      console.error('Error persisting session to R2:', err);
+      console.error('Error writing manifest to R2:', err);
     }
   }
 
   /**
-   * Incrementally flush new in-memory chunks to DO storage.
-   * Only converts and appends chunks that haven't been flushed yet,
-   * so replay data survives Durable Object hibernation.
+   * Read all R2 parts and write a single replay.json for fast replay.
+   * Skips consolidation if too many parts (> MAX_CONSOLIDATION_PARTS).
    */
-  private async persistReplayToStorage(): Promise<void> {
+  private async consolidateReplay(): Promise<void> {
     if (this.sessionState?.visibility === 'private') return;
+    if (!this.env.SESSIONS_BUCKET) return;
+    if (!this.sessionState) return;
+    if (this.flushedPartCount === 0) return;
+    if (this.flushedPartCount > MAX_CONSOLIDATION_PARTS) return;
 
-    // Only flush chunks we haven't persisted yet
-    const newChunks = this.allChunks.slice(this.flushedChunkCount);
-    if (newChunks.length === 0) return;
+    const prefix = `sessions/${this.sessionState.sessionId}`;
 
-    const converted: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
-    for (const raw of newChunks) {
-      try {
-        const frame = decodeFrame(raw);
-        if (frame.type === FrameType.Output) {
-          const text = new TextDecoder().decode(frame.payload);
-          converted.push({ type: 'output', data: text, timestamp: frame.timestamp });
-        } else if (frame.type === FrameType.Resize) {
-          const view = new DataView(
-            frame.payload.buffer,
-            frame.payload.byteOffset,
-            frame.payload.byteLength,
-          );
-          converted.push({
-            type: 'resize',
-            data: '',
-            timestamp: frame.timestamp,
-            cols: view.getUint16(0),
-            rows: view.getUint16(2),
-          });
+    try {
+      const allChunks: ReplayChunk[] = [];
+      for (let i = 0; i < this.flushedPartCount; i++) {
+        const partKey = `${prefix}/part-${String(i).padStart(6, '0')}.json`;
+        const obj = await this.env.SESSIONS_BUCKET.get(partKey);
+        if (obj) {
+          const data = await obj.json<{ chunks: ReplayChunk[] }>();
+          allChunks.push(...(data.chunks ?? []));
         }
-      } catch {
-        // Skip corrupt frames
+      }
+
+      if (allChunks.length > 0) {
+        await this.env.SESSIONS_BUCKET.put(
+          `${prefix}/replay.json`,
+          JSON.stringify({ chunks: allChunks }),
+          { httpMetadata: { contentType: 'application/json' } },
+        );
+      }
+    } catch (err) {
+      console.error('Error consolidating replay:', err);
+    }
+  }
+
+  // ── Replay & Export ──────────────────────────────────────────
+
+  /**
+   * Collect all available chunks: flushed R2 parts + pending memory buffer.
+   * Used during live sessions to give a complete replay.
+   */
+  private async collectAllChunks(): Promise<ReplayChunk[]> {
+    const allChunks: ReplayChunk[] = [];
+
+    // Read flushed R2 parts
+    if (this.env.SESSIONS_BUCKET && this.sessionState && this.flushedPartCount > 0) {
+      const prefix = `sessions/${this.sessionState.sessionId}`;
+      for (let i = 0; i < this.flushedPartCount; i++) {
+        try {
+          const partKey = `${prefix}/part-${String(i).padStart(6, '0')}.json`;
+          const obj = await this.env.SESSIONS_BUCKET.get(partKey);
+          if (obj) {
+            const data = await obj.json<{ chunks: ReplayChunk[] }>();
+            allChunks.push(...(data.chunks ?? []));
+          }
+        } catch {
+          // Skip unreadable parts
+        }
       }
     }
 
-    if (converted.length === 0) return;
+    // Add pending memory buffer
+    if (this.pendingChunks.length > 0) {
+      allChunks.push(...this.convertBinaryToJson(this.pendingChunks));
+    }
 
-    // Load existing persisted chunks and append
-    const existing =
-      await this.state.storage.get<Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }>>(
-        'replayChunks',
-      ) ?? [];
+    return allChunks;
+  }
 
-    await this.state.storage.put('replayChunks', [...existing, ...converted]);
-    this.flushedChunkCount = this.allChunks.length;
+  /**
+   * Read replay from R2 for ended sessions.
+   * Tries consolidated replay.json first, then falls back to reading individual parts.
+   */
+  private async readReplayFromR2(): Promise<ReplayChunk[]> {
+    if (!this.env.SESSIONS_BUCKET || !this.sessionState) return [];
+
+    const prefix = `sessions/${this.sessionState.sessionId}`;
+
+    // Try consolidated replay.json first (fast path)
+    try {
+      const consolidated = await this.env.SESSIONS_BUCKET.get(`${prefix}/replay.json`);
+      if (consolidated) {
+        const data = await consolidated.json<{ chunks: ReplayChunk[] }>();
+        return data.chunks ?? [];
+      }
+    } catch {
+      // Fall through to parts
+    }
+
+    // Try reading manifest + individual parts
+    try {
+      const manifestObj = await this.env.SESSIONS_BUCKET.get(`${prefix}/manifest.json`);
+      if (manifestObj) {
+        const manifest = await manifestObj.json<{ partCount: number; totalChunks: number }>();
+        const allChunks: ReplayChunk[] = [];
+        for (let i = 0; i < manifest.partCount; i++) {
+          const partKey = `${prefix}/part-${String(i).padStart(6, '0')}.json`;
+          const obj = await this.env.SESSIONS_BUCKET.get(partKey);
+          if (obj) {
+            const data = await obj.json<{ chunks: ReplayChunk[] }>();
+            allChunks.push(...(data.chunks ?? []));
+          }
+        }
+        return allChunks;
+      }
+    } catch {
+      // Fall through to legacy
+    }
+
+    // Try legacy single-file format: sessions/{id}.json
+    try {
+      const legacy = await this.env.SESSIONS_BUCKET.get(
+        `sessions/${this.sessionState.sessionId}.json`,
+      );
+      if (legacy) {
+        const data = await legacy.json<{ chunks: ReplayChunk[] }>();
+        return data.chunks ?? [];
+      }
+    } catch {
+      // No R2 data
+    }
+
+    return [];
   }
 
   private async handleReplay(): Promise<Response> {
-    // Ensure session state is loaded (needed for R2 fallback)
+    // Ensure session state is loaded
     if (!this.sessionState) {
-      this.sessionState = await this.state.storage.get<SessionState>('sessionState') ?? null;
+      this.sessionState = (await this.state.storage.get<SessionState>('sessionState')) ?? null;
     }
 
     // Private sessions have no replay
@@ -525,60 +592,30 @@ export class SessionHub implements DurableObject {
       });
     }
 
-    // Try in-memory first (session still alive)
-    if (this.allChunks.length > 0) {
-      const chunks: Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }> = [];
-      for (const raw of this.allChunks) {
-        try {
-          const frame = decodeFrame(raw);
-          if (frame.type === FrameType.Output) {
-            const text = new TextDecoder().decode(frame.payload);
-            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp });
-          } else if (frame.type === FrameType.Resize) {
-            const view = new DataView(
-              frame.payload.buffer,
-              frame.payload.byteOffset,
-              frame.payload.byteLength,
-            );
-            chunks.push({
-              type: 'resize',
-              data: '',
-              timestamp: frame.timestamp,
-              cols: view.getUint16(0),
-              rows: view.getUint16(2),
-            });
-          }
-        } catch {
-          // Skip corrupt frames
-        }
-      }
+    // 1. Live session — combine R2 parts + pending memory
+    if (this.pendingChunks.length > 0 || (this.flushedPartCount > 0 && this.broadcaster)) {
+      const chunks = await this.collectAllChunks();
       return new Response(JSON.stringify({ chunks }), {
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    // Fall back to DO storage (after eviction/restart)
-    const stored = await this.state.storage.get<Array<{ type: string; data: string; timestamp: number; cols?: number; rows?: number }>>('replayChunks');
+    // 2. R2 new format (consolidated or parts) + legacy format
+    if (this.env.SESSIONS_BUCKET && this.sessionState) {
+      const chunks = await this.readReplayFromR2();
+      if (chunks.length > 0) {
+        return new Response(JSON.stringify({ chunks }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // 3. DO storage legacy fallback
+    const stored = await this.state.storage.get<ReplayChunk[]>('replayChunks');
     if (stored && stored.length > 0) {
       return new Response(JSON.stringify({ chunks: stored }), {
         headers: { 'Content-Type': 'application/json' },
       });
-    }
-
-    // Fall back to R2 (permanent archive)
-    if (this.env.SESSIONS_BUCKET && this.sessionState) {
-      try {
-        const r2Object = await this.env.SESSIONS_BUCKET.get(
-          `sessions/${this.sessionState.sessionId}.json`,
-        );
-        if (r2Object) {
-          return new Response(r2Object.body, {
-            headers: { 'Content-Type': 'application/json' },
-          });
-        }
-      } catch (err) {
-        console.error('Error reading replay from R2:', err);
-      }
     }
 
     return new Response(JSON.stringify({ chunks: [] }), {
@@ -600,54 +637,18 @@ export class SessionHub implements DurableObject {
       return new Response('Export not available for private sessions', { status: 404 });
     }
 
-    // Get chunks — prefer in-memory, fall back to DO storage
-    type ReplayChunk = { type?: string; data: string; timestamp: number; cols?: number; rows?: number };
+    // Get chunks — try live → R2 → DO storage legacy
     let chunks: ReplayChunk[];
 
-    if (this.allChunks.length > 0) {
-      chunks = [];
-      for (const raw of this.allChunks) {
-        try {
-          const frame = decodeFrame(raw);
-          if (frame.type === FrameType.Output) {
-            const text = new TextDecoder().decode(frame.payload);
-            chunks.push({ type: 'output', data: text, timestamp: frame.timestamp });
-          } else if (frame.type === FrameType.Resize) {
-            const view = new DataView(
-              frame.payload.buffer,
-              frame.payload.byteOffset,
-              frame.payload.byteLength,
-            );
-            chunks.push({
-              type: 'resize',
-              data: '',
-              timestamp: frame.timestamp,
-              cols: view.getUint16(0),
-              rows: view.getUint16(2),
-            });
-          }
-        } catch {
-          // Skip corrupt frames
-        }
-      }
+    if (this.pendingChunks.length > 0 || (this.flushedPartCount > 0 && this.broadcaster)) {
+      chunks = await this.collectAllChunks();
     } else {
-      // Fall back to DO storage
-      const stored = await this.state.storage.get<ReplayChunk[]>('replayChunks');
-      chunks = stored ?? [];
+      chunks = await this.readReplayFromR2();
 
-      // Fall back to R2 if DO storage is empty
-      if (chunks.length === 0 && this.env.SESSIONS_BUCKET && this.sessionState) {
-        try {
-          const r2Object = await this.env.SESSIONS_BUCKET.get(
-            `sessions/${this.sessionState.sessionId}.json`,
-          );
-          if (r2Object) {
-            const r2Data = await r2Object.json<{ chunks: ReplayChunk[] }>();
-            chunks = r2Data.chunks ?? [];
-          }
-        } catch (err) {
-          console.error('Error reading export data from R2:', err);
-        }
+      // Fall back to DO storage legacy
+      if (chunks.length === 0) {
+        const stored = await this.state.storage.get<ReplayChunk[]>('replayChunks');
+        chunks = stored ?? [];
       }
     }
 
@@ -696,6 +697,78 @@ export class SessionHub implements DurableObject {
     });
   }
 
+  // ── Utilities ────────────────────────────────────────────────
+
+  /** Convert binary Uint8Array frames to JSON ReplayChunk format. */
+  private convertBinaryToJson(rawFrames: Uint8Array[]): ReplayChunk[] {
+    const chunks: ReplayChunk[] = [];
+    for (const raw of rawFrames) {
+      try {
+        const frame = decodeFrame(raw);
+        if (frame.type === FrameType.Output) {
+          const text = new TextDecoder().decode(frame.payload);
+          chunks.push({ type: 'output', data: text, timestamp: frame.timestamp });
+        } else if (frame.type === FrameType.Resize) {
+          const view = new DataView(
+            frame.payload.buffer,
+            frame.payload.byteOffset,
+            frame.payload.byteLength,
+          );
+          chunks.push({
+            type: 'resize',
+            data: '',
+            timestamp: frame.timestamp,
+            cols: view.getUint16(0),
+            rows: view.getUint16(2),
+          });
+        }
+      } catch {
+        // Skip corrupt frames
+      }
+    }
+    return chunks;
+  }
+
+  private broadcastViewerCount(): void {
+    const count = this.viewers.size;
+    const frame = encodeViewerCountFrame(count);
+
+    // Send to broadcaster if connected
+    if (this.broadcaster) {
+      try {
+        this.broadcaster.send(frame);
+      } catch {
+        // Broadcaster disconnected
+      }
+    }
+
+    // Send to all viewers
+    for (const viewer of this.viewers) {
+      try {
+        viewer.send(frame);
+      } catch {
+        // Viewer disconnected
+      }
+    }
+
+    // Update viewer count in database
+    this.updateViewerCountInDb(count);
+  }
+
+  private async updateViewerCountInDb(count: number): Promise<void> {
+    if (!this.sessionState) return;
+
+    try {
+      const db = createDb(this.env.TURSO_URL, this.env.TURSO_AUTH_TOKEN);
+      await db
+        .update(sessions)
+        .set({ viewerCount: count })
+        .where(eq(sessions.id, this.sessionState.sessionId));
+    } catch (err) {
+      console.error('Error updating viewer count:', err);
+    }
+  }
+
   async alarm(): Promise<void> {
     // Check max session duration first
     if (this.sessionState) {
@@ -720,8 +793,8 @@ export class SessionHub implements DurableObject {
       return;
     }
 
-    // Periodically flush replay chunks to DO storage so data survives hibernation
-    await this.persistReplayToStorage();
+    // Flush pending chunks to R2
+    await this.flushPendingToR2();
 
     // Send app-level ping and schedule next heartbeat
     try {
