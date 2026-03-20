@@ -40,8 +40,12 @@ This is a pnpm monorepo managed by Turborepo. The packages must be built in a sp
 |---------|------|-------------|
 | `@shout/shared` | `packages/shared/` | Types, binary WebSocket protocol, constants. **Must build first.** |
 | `@shout/cli` | `packages/cli/` | Commander.js CLI for broadcasting terminal sessions |
+| `@shout/sdk` | `packages/sdk/` | TypeScript SDK for programmatic broadcasting |
+| `@shout/mcp` | `packages/mcp/` | TypeScript MCP server for AI agents |
 | `@shout/worker` | `packages/worker/` | Cloudflare Workers + Durable Objects backend |
 | `@shout/web` | `packages/web/` | Next.js 15 / React 19 frontend with xterm.js |
+| Python SDK | `packages/sdk-python/` | Python SDK (PyPI: shout-run-sdk) |
+| Python MCP | `packages/mcp-python/` | Python MCP server (PyPI: shout-run-mcp) |
 
 ### Build Order
 
