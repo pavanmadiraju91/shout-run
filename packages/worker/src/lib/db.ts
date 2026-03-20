@@ -20,7 +20,7 @@ export const sessions = sqliteTable('sessions', {
     .references(() => users.id),
   title: text('title').notNull(),
   description: text('description'),
-  status: text('status').notNull(), // 'live' | 'ended'
+  status: text('status').notNull(), // 'live' | 'ended' | 'deleted'
   visibility: text('visibility').notNull(), // 'public' | 'followers' | 'private'
   viewerCount: integer('viewer_count').notNull().default(0),
   tags: text('tags'), // JSON array string

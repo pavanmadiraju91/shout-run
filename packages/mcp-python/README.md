@@ -96,6 +96,7 @@ If you installed via pip instead of using uvx:
 | `shout_write` | Send terminal output to the broadcast (supports ANSI codes) |
 | `shout_end_broadcast` | End the active broadcast |
 | `shout_broadcast_status` | Check session state, viewer count, and duration |
+| `shout_delete_session` | Delete an ended session you own (permanent) |
 
 ## Environment Variables
 

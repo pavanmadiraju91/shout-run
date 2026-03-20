@@ -343,6 +343,49 @@ server.tool('shout_broadcast_status', 'Check the status of the current broadcast
   };
 });
 
+server.tool(
+  'shout_delete_session',
+  'Delete a broadcast session. Only works on ended sessions you own. This is permanent.',
+  {
+    session_id: z.string().describe('The session ID to delete'),
+  },
+  async ({ session_id }) => {
+    if (!API_KEY) {
+      return {
+        content: [{ type: 'text', text: 'Error: SHOUT_API_KEY environment variable is not set.' }],
+        isError: true,
+      };
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/api/sessions/${session_id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${API_KEY}` },
+      });
+
+      if (!response.ok) {
+        const error = (await response.json().catch(() => ({}))) as { error?: string };
+        return {
+          content: [
+            { type: 'text', text: `Failed to delete session: ${error.error ?? response.status}` },
+          ],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text', text: `Session ${session_id} deleted.` }],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        content: [{ type: 'text', text: `Failed to delete session: ${message}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
 // ── Start ──────────────────────────────────────────────────
 
 // Clean up on exit

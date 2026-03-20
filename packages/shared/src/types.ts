@@ -8,7 +8,7 @@ export interface User {
 }
 
 // ── Session ───────────────────────────────────────────────────
-export type SessionStatus = 'live' | 'ended';
+export type SessionStatus = 'live' | 'ended' | 'deleted';
 export type SessionVisibility = 'public' | 'followers' | 'private';
 
 export interface Session {
