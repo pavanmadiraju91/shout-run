@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq, desc, and, gte, sql } from 'drizzle-orm';
+import { eq, desc, and, gte, ne, sql } from 'drizzle-orm';
 import type { Env } from '../env.js';
 import { createDb, sessions, users, generateId } from '../lib/db.js';
 import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
@@ -200,9 +200,9 @@ sessionsRouter.post('/:id/upvote', async (c) => {
 
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
 
-  // Check session exists
+  // Check session exists (exclude deleted)
   const session = await db.query.sessions.findFirst({
-    where: eq(sessions.id, sessionId),
+    where: and(eq(sessions.id, sessionId), ne(sessions.status, 'deleted')),
   });
 
   if (!session) {
@@ -253,7 +253,7 @@ sessionsRouter.get('/:id', optionalAuthMiddleware, async (c) => {
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(eq(sessions.id, sessionId))
+    .where(and(eq(sessions.id, sessionId), ne(sessions.status, 'deleted')))
     .limit(1);
 
   if (result.length === 0) {
@@ -313,7 +313,7 @@ sessionsRouter.get('/user/:username', async (c) => {
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(and(eq(sessions.userId, user.id), eq(sessions.visibility, 'public')))
+    .where(and(eq(sessions.userId, user.id), eq(sessions.visibility, 'public'), ne(sessions.status, 'deleted')))
     .orderBy(desc(sessions.startedAt))
     .limit(50);
 
@@ -423,13 +423,45 @@ sessionsRouter.post('/:id/end', authMiddleware, async (c) => {
   return c.json<ApiResponse>({ ok: true, data: { ended: true } });
 });
 
+// DELETE /api/sessions/:id - Soft-delete a session (owner only, ended sessions only)
+sessionsRouter.delete('/:id', authMiddleware, async (c) => {
+  const user = c.get('user');
+  const sessionId = c.req.param('id')!;
+  const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+
+  // Fetch session — only non-deleted
+  const [session] = await db
+    .select()
+    .from(sessions)
+    .where(and(eq(sessions.id, sessionId), ne(sessions.status, 'deleted')));
+
+  if (!session) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Owner check — return 404 (not 403) to avoid leaking existence
+  if (session.userId !== user.id) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Only ended sessions can be deleted
+  if (session.status === 'live') {
+    return c.json<ApiResponse>({ ok: false, error: 'Cannot delete a live session' }, 409);
+  }
+
+  // Soft delete
+  await db.update(sessions).set({ status: 'deleted' }).where(eq(sessions.id, sessionId));
+
+  return c.json<ApiResponse>({ ok: true });
+});
+
 // GET /api/sessions/:id/replay - Get replay data for an ended session
 sessionsRouter.get('/:id/replay', async (c) => {
   const sessionId = c.req.param('id')!;
 
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
   const session = await db.query.sessions.findFirst({
-    where: eq(sessions.id, sessionId),
+    where: and(eq(sessions.id, sessionId), ne(sessions.status, 'deleted')),
   });
 
   if (!session) {
@@ -463,7 +495,7 @@ sessionsRouter.get('/:id/export', async (c) => {
 
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
   const session = await db.query.sessions.findFirst({
-    where: eq(sessions.id, sessionId),
+    where: and(eq(sessions.id, sessionId), ne(sessions.status, 'deleted')),
   });
 
   if (!session) {
@@ -509,7 +541,7 @@ sessionsRouter.get('/:id/ws/viewer', async (c) => {
   // Verify session exists and is live
   const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
   const session = await db.query.sessions.findFirst({
-    where: eq(sessions.id, sessionId),
+    where: and(eq(sessions.id, sessionId), ne(sessions.status, 'deleted')),
   });
 
   if (!session) {
