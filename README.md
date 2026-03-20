@@ -152,13 +152,13 @@ Add to your MCP client settings:
 }
 ```
 
-**Exposed tools:** `shout_start_broadcast`, `shout_write`, `shout_end_broadcast`, `shout_broadcast_status`
+**Exposed tools:** `shout_start_broadcast`, `shout_write`, `shout_end_broadcast`, `shout_broadcast_status`, `shout_delete_session`
 
 Docs: [`packages/mcp/README.md`](packages/mcp/README.md)
 
 ### Python MCP server
 
-Same tools, runs with `uvx` (or `pip install shout-run-mcp`).
+Same tools as the TypeScript MCP server, runs with `uvx` (or `pip install shout-run-mcp`).
 
 ```json
 {
