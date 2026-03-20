@@ -73,6 +73,14 @@ You can list your keys with `shout api-key list` and revoke one with `shout api-
 - **`resize(cols, rows)`** — Updates terminal dimensions.
 - **`end()`** — Flushes buffer, sends end frame, closes session.
 
+### Static Methods
+
+- **`ShoutSession.delete_session(api_key, session_id, *, api_url='https://api.shout.run')`** — Delete an ended session (permanent). Raises `RuntimeError` on failure.
+
+```python
+ShoutSession.delete_session(api_key='shout_sk_...', session_id='abc123')
+```
+
 ### Properties
 
 - **`state`** — Current state: `SessionState.IDLE`, `.CONNECTING`, `.LIVE`, `.ENDING`, `.ENDED`
