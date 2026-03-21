@@ -100,10 +100,12 @@ export function encodeResizeFrame(cols: number, rows: number): Uint8Array {
 }
 
 export function decodeViewerCount(payload: Uint8Array): number {
+  if (payload.byteLength < 4) return 0;
   return new DataView(payload.buffer, payload.byteOffset, payload.byteLength).getUint32(0, false);
 }
 
 export function decodeResize(payload: Uint8Array): { cols: number; rows: number } {
+  if (payload.byteLength < 4) return { cols: 80, rows: 24 };
   const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   return { cols: view.getUint16(0, false), rows: view.getUint16(2, false) };
 }

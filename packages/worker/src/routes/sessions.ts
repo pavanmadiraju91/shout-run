@@ -104,6 +104,7 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
     data: {
       sessionId,
       wsUrl,
+      username: user.username,
     },
   });
 });
@@ -220,13 +221,14 @@ sessionsRouter.post('/:id/upvote', async (c) => {
   // Record vote in KV with 30-day TTL
   await c.env.RATE_LIMITS.put(kvKey, '1', { expirationTtl: 30 * 24 * 60 * 60 });
 
-  // Increment upvotes
-  await db
+  // Increment upvotes and get the updated count
+  const [updated] = await db
     .update(sessions)
     .set({ upvotes: sql`${sessions.upvotes} + 1` })
-    .where(eq(sessions.id, sessionId));
+    .where(eq(sessions.id, sessionId))
+    .returning({ upvotes: sessions.upvotes });
 
-  const newCount = (session.upvotes ?? 0) + 1;
+  const newCount = updated.upvotes;
 
   return c.json<ApiResponse<{ upvotes: number }>>({ ok: true, data: { upvotes: newCount } });
 });

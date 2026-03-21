@@ -245,7 +245,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
       socketRef.current?.disconnect();
       xterm.dispose();
     };
-  }, [sessionId, isLive, replayMode, onTerminalReady, onResizeReady, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, fitToContainer, theme]);
+  }, [sessionId, isLive, replayMode, onTerminalReady, onResizeReady, handleOutput, handleViewerCount, handleResize, handleEnd, handleError, fitToContainer]);
 
   const ariaLabel = sessionTitle ? `Terminal session: ${sessionTitle}` : 'Terminal session';
 

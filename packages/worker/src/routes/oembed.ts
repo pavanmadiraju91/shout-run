@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { eq } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 import type { Env } from '../env.js';
 import { createDb, sessions, users } from '../lib/db.js';
 
@@ -39,7 +39,7 @@ oembedRouter.get('/', async (c) => {
     })
     .from(sessions)
     .innerJoin(users, eq(sessions.userId, users.id))
-    .where(eq(sessions.id, sessionId))
+    .where(and(eq(sessions.id, sessionId), eq(sessions.visibility, 'public'), ne(sessions.status, 'deleted')))
     .limit(1);
 
   if (result.length === 0) {

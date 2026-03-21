@@ -5,8 +5,11 @@ export const corsMiddleware = cors({
     const allowed = [
       'http://localhost:3000',
       'https://shout.run',
+      'https://www.shout.run',
     ];
     if (allowed.includes(origin)) return origin;
+    // Allow Vercel preview deployments
+    if (origin.endsWith('.vercel.app')) return origin;
     return null;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],

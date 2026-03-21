@@ -26,6 +26,7 @@ export class ReconnectingWebSocket extends EventEmitter<ReconnectingWebSocketEve
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private sendQueue: Array<ArrayBuffer | Uint8Array | string> = [];
+  private readonly maxQueueSize = 1000;
   private isConnected = false;
   private isClosed = false;
   private headers: Record<string, string>;
@@ -107,7 +108,9 @@ export class ReconnectingWebSocket extends EventEmitter<ReconnectingWebSocketEve
     if (this.isConnected && this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(data);
     } else {
-      // Queue for later
+      if (this.sendQueue.length >= this.maxQueueSize) {
+        this.sendQueue.shift(); // Drop oldest
+      }
       this.sendQueue.push(data);
     }
   }

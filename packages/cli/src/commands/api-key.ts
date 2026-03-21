@@ -16,14 +16,20 @@ async function requireAuth(): Promise<string> {
 export async function createApiKey(name: string): Promise<void> {
   const token = await requireAuth();
 
-  const res = await fetch(`${API_BASE}/api/keys`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ name }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/keys`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name }),
+    });
+  } catch (error) {
+    console.error(chalk.red(error instanceof Error ? error.message : 'Failed to connect to server'));
+    process.exit(1);
+  }
 
   const body = (await res.json()) as ApiResponse<CreateApiKeyResponse>;
 
@@ -45,9 +51,15 @@ export async function createApiKey(name: string): Promise<void> {
 export async function listApiKeys(): Promise<void> {
   const token = await requireAuth();
 
-  const res = await fetch(`${API_BASE}/api/keys`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/keys`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    console.error(chalk.red(error instanceof Error ? error.message : 'Failed to connect to server'));
+    process.exit(1);
+  }
 
   const body = (await res.json()) as ApiResponse<ApiKey[]>;
 
@@ -84,10 +96,16 @@ export async function listApiKeys(): Promise<void> {
 export async function revokeApiKey(id: string): Promise<void> {
   const token = await requireAuth();
 
-  const res = await fetch(`${API_BASE}/api/keys/${id}`, {
-    method: 'DELETE',
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/keys/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch (error) {
+    console.error(chalk.red(error instanceof Error ? error.message : 'Failed to connect to server'));
+    process.exit(1);
+  }
 
   const body = (await res.json()) as ApiResponse;
 
