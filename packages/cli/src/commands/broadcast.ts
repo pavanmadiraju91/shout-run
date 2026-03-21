@@ -253,7 +253,10 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   });
 
   ws.on('reconnecting', (attempt) => {
-    process.stderr.write(`\r${chalk.yellow(`Reconnecting (attempt ${attempt})...`)}                    `);
+    // Suppress the first reconnect attempt — transient drops are normal at startup
+    if (attempt > 1) {
+      process.stderr.write(`\r${chalk.yellow(`Reconnecting (attempt ${attempt})...`)}                    `);
+    }
   });
 
   // Define endSession and register signal handlers early — before countdown and PTY spawn
@@ -320,6 +323,8 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
 
     if (process.stdout.columns && process.stdout.rows) {
       ws.on('open', () => {
+        // Clear any reconnecting message
+        process.stderr.write('\r\x1b[K');
         const resizeFrame = encodeResizeFrame(process.stdout.columns, process.stdout.rows);
         ws.send(resizeFrame);
       });
@@ -333,52 +338,66 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     // Filter out undefined env values and strip known sensitive vars
     const cleanEnv = stripSensitiveEnv(process.env);
 
-    const ptyProcess = pty.spawn(shell, [], {
-      name: 'xterm-256color',
-      cols,
-      rows,
-      cwd: process.cwd(),
-      env: cleanEnv,
-    });
+    let ptyProcess: pty.IPty | null = null;
 
-    // Send initial terminal size
     ws.on('open', () => {
-      const resizeFrame = encodeResizeFrame(cols, rows);
-      ws.send(resizeFrame);
-    });
+      // Clear any reconnecting message
+      process.stderr.write('\r\x1b[K');
 
-    // PTY output → local terminal + WebSocket
-    ptyProcess.onData((data: string) => {
-      // Write to local terminal so the user sees their own output
-      process.stdout.write(data);
+      if (!ptyProcess) {
+        // First connection — spawn the PTY
+        const resizeFrame = encodeResizeFrame(cols, rows);
+        ws.send(resizeFrame);
 
-      // Buffer and send to WebSocket
-      buffer += data;
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
-    });
+        ptyProcess = pty.spawn(shell, [], {
+          name: 'xterm-256color',
+          cols,
+          rows,
+          cwd: process.cwd(),
+          env: cleanEnv,
+        });
 
-    // User keyboard input → PTY
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    process.stdin.on('data', (data: Buffer) => {
-      ptyProcess.write(data.toString());
-    });
+        // PTY output → local terminal + WebSocket
+        ptyProcess.onData((data: string) => {
+          // Write to local terminal so the user sees their own output
+          process.stdout.write(data);
 
-    // Handle terminal resize
-    process.stdout.on('resize', () => {
-      const newCols = process.stdout.columns || 80;
-      const newRows = process.stdout.rows || 24;
-      ptyProcess.resize(newCols, newRows);
-      const resizeFrame = encodeResizeFrame(newCols, newRows);
-      ws.send(resizeFrame);
-    });
+          // Buffer and send to WebSocket
+          buffer += data;
+          if (debounceTimer) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
+        });
 
-    // PTY exits (user typed `exit` or Ctrl+D)
-    ptyProcess.onExit(({ exitCode }) => {
-      // Restore terminal
-      process.stdin.setRawMode(false);
-      endSession();
+        // User keyboard input → PTY
+        process.stdin.setRawMode(true);
+        process.stdin.resume();
+        process.stdin.on('data', (data: Buffer) => {
+          ptyProcess!.write(data.toString());
+        });
+
+        // Handle terminal resize
+        process.stdout.on('resize', () => {
+          const newCols = process.stdout.columns || 80;
+          const newRows = process.stdout.rows || 24;
+          ptyProcess!.resize(newCols, newRows);
+          const resizeFrame = encodeResizeFrame(newCols, newRows);
+          ws.send(resizeFrame);
+        });
+
+        // PTY exits (user typed `exit` or Ctrl+D)
+        ptyProcess.onExit(({ exitCode }) => {
+          // Restore terminal
+          process.stdin.setRawMode(false);
+          endSession();
+        });
+      } else {
+        // Reconnection — re-send current terminal size
+        const resizeFrame = encodeResizeFrame(
+          process.stdout.columns || 80,
+          process.stdout.rows || 24,
+        );
+        ws.send(resizeFrame);
+      }
     });
   }
 }
