@@ -794,6 +794,11 @@ export class SessionHub implements DurableObject {
   }
 
   async alarm(): Promise<void> {
+    // Restore session state if lost after hibernation
+    if (!this.sessionState) {
+      this.sessionState = (await this.state.storage.get<SessionState>('sessionState')) ?? null;
+    }
+
     // Check max session duration first
     if (this.sessionState) {
       const elapsed = Date.now() - this.sessionState.startedAt;
