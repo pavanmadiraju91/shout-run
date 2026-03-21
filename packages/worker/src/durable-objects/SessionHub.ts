@@ -125,7 +125,14 @@ export class SessionHub implements DurableObject {
 
     // Explicit end from API (CLI shutdown fallback)
     if (path === '/end' && request.method === 'POST') {
-      await this.flushPendingToR2();
+      // Explicit end — close broadcaster WS if still connected and run full cleanup
+      if (this.broadcaster) {
+        try {
+          this.broadcaster.close(WS_CLOSE.SESSION_ENDED, 'Session ended');
+        } catch { /* already closed */ }
+        this.broadcaster = null;
+      }
+      await this.handleBroadcasterClose();
       return new Response('OK', { status: 200 });
     }
 
