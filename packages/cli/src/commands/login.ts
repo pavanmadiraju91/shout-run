@@ -37,15 +37,20 @@ async function pollForToken(
   while (Date.now() < expiresAt) {
     await new Promise((resolve) => setTimeout(resolve, interval * 1000));
 
-    const response = await fetch(`${API_BASE}/api/auth/token`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ device_code: deviceCode }),
-    });
-
-    const result = (await response.json()) as ApiResponse<AuthTokens>;
+    let result: ApiResponse<AuthTokens>;
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ device_code: deviceCode }),
+      });
+      result = (await response.json()) as ApiResponse<AuthTokens>;
+    } catch {
+      // Network error (DNS, timeout, etc.) — retry on next interval
+      continue;
+    }
 
     if (result.ok && result.data) {
       return result.data;
@@ -80,6 +85,7 @@ export async function login(): Promise<void> {
   }
 
   const spinner = ora('Connecting to shout server...').start();
+  let pollSpinner: ReturnType<typeof ora> | undefined;
 
   try {
     const deviceCode = await requestDeviceCode();
@@ -101,7 +107,7 @@ export async function login(): Promise<void> {
     }
 
     console.log();
-    const pollSpinner = ora('Waiting for authorization...').start();
+    pollSpinner = ora('Waiting for authorization...').start();
 
     const tokens = await pollForToken(
       deviceCode.device_code,
@@ -118,7 +124,11 @@ export async function login(): Promise<void> {
 
     pollSpinner.succeed(`Logged in as ${chalk.bold(tokens.username)}`);
   } catch (error) {
-    spinner.fail('Login failed');
+    if (pollSpinner) {
+      pollSpinner.fail('Login failed');
+    } else {
+      spinner.fail('Login failed');
+    }
     console.error(chalk.red(error instanceof Error ? error.message : 'Unknown error'));
     process.exit(1);
   }
