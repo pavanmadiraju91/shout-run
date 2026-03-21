@@ -365,15 +365,23 @@ export default function SessionViewerPage() {
           </div>
         </div>
       ) : (
-        <Terminal
-          sessionId={sessionId}
-          isLive={isLive}
-          sessionTitle={session.title || undefined}
-          onViewerCountChange={handleViewerCountChange}
-          replayMode={!isLive}
-          onTerminalReady={handleTerminalReady}
-          onResizeReady={handleResizeReady}
-        />
+        <div className="flex-1 relative" style={{ minHeight: 0 }}>
+          <Terminal
+            sessionId={sessionId}
+            isLive={isLive}
+            sessionTitle={session.title || undefined}
+            onViewerCountChange={handleViewerCountChange}
+            replayMode={!isLive}
+            onTerminalReady={handleTerminalReady}
+            onResizeReady={handleResizeReady}
+          />
+          {/* Replay loading overlay */}
+          {!isLive && replay.isLoading && (
+            <div className="absolute inset-0 bg-shout-bg flex items-center justify-center z-10">
+              <div className="text-shout-muted text-sm animate-pulse">Retrieving session...</div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Player bar at bottom (ended sessions only) */}
