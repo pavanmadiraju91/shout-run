@@ -73,6 +73,7 @@ export interface CreateSessionRequest {
 export interface CreateSessionResponse {
   sessionId: string;
   wsUrl: string;
+  username: string;
 }
 
 // ── Secret Detection ─────────────────────────────────────────

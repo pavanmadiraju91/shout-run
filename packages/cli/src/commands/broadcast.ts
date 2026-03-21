@@ -232,16 +232,20 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   ws.on('close', (code, reason) => {
     if (isEnding) return;
 
-    console.log();
     if (code === WS_CLOSE.AUTH_FAILED) {
+      ws.close();
+      console.log();
       console.log(chalk.red('Authentication failed. Try `shout login` again.'));
     } else if (code === WS_CLOSE.RATE_LIMITED) {
+      ws.close();
+      console.log();
       console.log(chalk.red('Rate limited. Please try again later.'));
     } else if (code === WS_CLOSE.MAX_DURATION) {
+      ws.close();
+      console.log();
       console.log(chalk.yellow('Maximum session duration reached.'));
-    } else if (code !== WS_CLOSE.NORMAL && code !== WS_CLOSE.GOING_AWAY) {
-      console.log(chalk.red(`Connection closed: ${reason || code}`));
     }
+    // Transient (1006, etc.) — silent, auto-reconnect handles it
   });
 
   ws.on('error', (error) => {
@@ -252,8 +256,7 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     process.stderr.write(`\r${chalk.yellow(`Reconnecting (attempt ${attempt})...`)}                    `);
   });
 
-  ws.connect();
-
+  // Define endSession and register signal handlers early — before countdown and PTY spawn
   function endSession(): void {
     if (isEnding) return;
     isEnding = true;
@@ -293,6 +296,12 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
         process.exit(0);
       });
   }
+
+  process.on('SIGINT', endSession);
+  process.on('SIGTERM', endSession);
+  process.on('SIGHUP', endSession);
+
+  ws.connect();
 
   if (isPiped) {
     // ── Pipe mode: read stdin and forward ──
@@ -372,8 +381,4 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
       endSession();
     });
   }
-
-  process.on('SIGINT', endSession);
-  process.on('SIGTERM', endSession);
-  process.on('SIGHUP', endSession);
 }

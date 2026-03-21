@@ -162,7 +162,7 @@ export class ShoutSession extends EventEmitter {
     const webBase = this.apiUrl.replace('api.', '').replace(/:\d+$/, '');
     const info: ShoutSessionInfo = {
       sessionId: result.data.sessionId,
-      url: `${webBase}/${result.data.sessionId}`,
+      url: `${webBase}/${result.data.username}/${result.data.sessionId}`,
       wsUrl: result.data.wsUrl,
     };
 
@@ -268,19 +268,17 @@ export class ShoutSession extends EventEmitter {
 
     this.bytesThisSecond += totalBytes;
 
-    // Chunk large payloads
+    // Chunk large payloads using byte-safe splitting
     if (totalBytes <= MAX_CHUNK_BYTES) {
       this.sendChunk(raw);
     } else {
+      const encoder = new TextEncoder();
+      const encoded = encoder.encode(raw);
       let offset = 0;
-      while (offset < raw.length) {
-        let end = offset + MAX_CHUNK_BYTES;
-        if (end > raw.length) end = raw.length;
-        // Avoid splitting multi-byte chars
-        while (end > offset && raw.charCodeAt(end - 1) >= 0xd800 && raw.charCodeAt(end - 1) <= 0xdbff) {
-          end--;
-        }
-        this.sendChunk(raw.slice(offset, end));
+      while (offset < encoded.byteLength) {
+        const end = Math.min(offset + MAX_CHUNK_BYTES, encoded.byteLength);
+        const chunk = new TextDecoder().decode(encoded.slice(offset, end));
+        this.sendChunk(chunk);
         offset = end;
       }
     }

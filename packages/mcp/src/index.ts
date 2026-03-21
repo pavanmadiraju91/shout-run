@@ -33,6 +33,7 @@ interface ActiveSession {
   viewerCount: number;
   buffer: string;
   debounceTimer: ReturnType<typeof setTimeout> | null;
+  rateLimitTimer?: ReturnType<typeof setTimeout>;
   bytesThisSecond: number;
   lastSecondReset: number;
 }
@@ -68,7 +69,7 @@ function flushBuffer(session: ActiveSession): void {
   if (session.bytesThisSecond + totalBytes > DEFAULT_RATE_LIMITS.maxBytesPerSecond) {
     const remaining = 1000 - (now - session.lastSecondReset);
     session.buffer = raw + session.buffer;
-    setTimeout(() => flushBuffer(session), remaining > 0 ? remaining : 1000);
+    session.rateLimitTimer = setTimeout(() => flushBuffer(session), remaining > 0 ? remaining : 1000);
     return;
   }
 
@@ -111,7 +112,7 @@ async function createAndConnectSession(title: string, visibility: string): Promi
     throw new Error(result.error ?? 'Failed to create session');
   }
 
-  const { sessionId, wsUrl } = result.data;
+  const { sessionId, wsUrl, username } = result.data;
 
   // Derive viewer URL
   const webBase = API_URL.replace('api.', '');
@@ -123,7 +124,7 @@ async function createAndConnectSession(title: string, visibility: string): Promi
 
   const session: ActiveSession = {
     sessionId,
-    url: `${webBase}/${sessionId}`,
+    url: `${webBase}/${username}/${sessionId}`,
     wsUrl,
     ws,
     startTime: Date.now(),
@@ -185,6 +186,7 @@ async function endActiveSession(): Promise<string | null> {
 
   // Flush buffer
   if (session.debounceTimer) clearTimeout(session.debounceTimer);
+  if (session.rateLimitTimer) clearTimeout(session.rateLimitTimer);
   flushBuffer(session);
 
   // Send end frame

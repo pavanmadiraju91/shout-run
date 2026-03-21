@@ -151,10 +151,16 @@ export class SessionHub implements DurableObject {
     return new Response('Not Found', { status: 404 });
   }
 
+  // Guard against double execution of handleBroadcasterClose
+  private isClosingBroadcaster = false;
+
   private async handleBroadcasterUpgrade(request: Request): Promise<Response> {
-    // Only one broadcaster allowed
+    // Replace stale broadcaster instead of rejecting — fixes reconnection 409 loop
     if (this.broadcaster) {
-      return new Response('Broadcaster already connected', { status: 409 });
+      try {
+        this.broadcaster.close(WS_CLOSE.GOING_AWAY, 'Replaced by new connection');
+      } catch { /* already dead */ }
+      this.broadcaster = null;
     }
 
     // Load session state if not in memory
@@ -332,6 +338,9 @@ export class SessionHub implements DurableObject {
   }
 
   private async handleBroadcasterClose(): Promise<void> {
+    if (this.isClosingBroadcaster) return;
+    this.isClosingBroadcaster = true;
+
     this.broadcaster = null;
     this.vtParser = null;
 
@@ -369,9 +378,9 @@ export class SessionHub implements DurableObject {
         console.error('Error updating session status:', err);
       }
     }
-  }
 
-  // ── R2 Batch Flushing ────────────────────────────────────────
+    this.isClosingBroadcaster = false;
+  }
 
   /**
    * Convert pending binary frames to JSON and write as a numbered part to R2.
@@ -781,8 +790,18 @@ export class SessionHub implements DurableObject {
       }
     }
 
-    // No broadcaster connected — nothing to ping
+    // No broadcaster connected — clean up if stale, otherwise reschedule
     if (!this.broadcaster) {
+      if (this.sessionState) {
+        const lastActivity = this.lastBroadcasterActivity || this.sessionState.startedAt;
+        if (Date.now() - lastActivity > PING_INTERVAL_MS * 4) {
+          // Session has been live without a broadcaster for too long — end it
+          await this.handleBroadcasterClose();
+        } else {
+          // Broadcaster might reconnect — reschedule
+          await this.state.storage.setAlarm(Date.now() + PING_INTERVAL_MS);
+        }
+      }
       return;
     }
 

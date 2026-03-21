@@ -21,6 +21,7 @@ export default function UserProfilePage() {
   const username = params.username as string;
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'live' | 'past'>('live');
 
   useEffect(() => {
@@ -30,6 +31,7 @@ export default function UserProfilePage() {
         setSessions(data);
       } catch (error) {
         console.error('Failed to fetch user sessions:', error);
+        setError('Failed to load sessions');
       } finally {
         setIsLoading(false);
       }
@@ -54,6 +56,14 @@ export default function UserProfilePage() {
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <p className="text-shout-muted text-center">{error}</p>
       </div>
     );
   }
