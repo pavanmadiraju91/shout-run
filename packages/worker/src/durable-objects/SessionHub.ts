@@ -163,6 +163,9 @@ export class SessionHub implements DurableObject {
       this.broadcaster = null;
     }
 
+    // Cancel any pending close cleanup — broadcaster is reconnecting
+    this.isClosingBroadcaster = false;
+
     // Load session state if not in memory
     if (!this.sessionState) {
       const stored = await this.state.storage.get<SessionState>('sessionState');
@@ -321,7 +324,10 @@ export class SessionHub implements DurableObject {
     wasClean: boolean,
   ): Promise<void> {
     if (ws === this.broadcaster) {
-      await this.handleBroadcasterClose();
+      // Don't end the session immediately — give the broadcaster time to reconnect.
+      // The alarm handler will clean up if no reconnection happens.
+      this.broadcaster = null;
+      await this.state.storage.setAlarm(Date.now() + PING_INTERVAL_MS);
     } else {
       this.viewers.delete(ws);
       this.broadcastViewerCount();
@@ -330,7 +336,9 @@ export class SessionHub implements DurableObject {
 
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
     if (ws === this.broadcaster) {
-      await this.handleBroadcasterClose();
+      // Don't end the session immediately — give the broadcaster time to reconnect.
+      this.broadcaster = null;
+      await this.state.storage.setAlarm(Date.now() + PING_INTERVAL_MS);
     } else {
       this.viewers.delete(ws);
       this.broadcastViewerCount();
@@ -794,7 +802,7 @@ export class SessionHub implements DurableObject {
     if (!this.broadcaster) {
       if (this.sessionState) {
         const lastActivity = this.lastBroadcasterActivity || this.sessionState.startedAt;
-        if (Date.now() - lastActivity > PING_INTERVAL_MS * 4) {
+        if (Date.now() - lastActivity > PING_INTERVAL_MS * 2) {
           // Session has been live without a broadcaster for too long — end it
           await this.handleBroadcasterClose();
         } else {

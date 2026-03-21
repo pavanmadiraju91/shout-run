@@ -1,6 +1,6 @@
 {
   "name": "@shout/cli",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "CLI for shout.run - live terminal broadcasting",
   "type": "module",
   "license": "MIT",
