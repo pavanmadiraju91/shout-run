@@ -82,6 +82,7 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
   useEffect(() => {
     if (!xtermRef.current) return;
     xtermRef.current.options.theme = theme === 'light' ? LIGHT_THEME : DARK_THEME;
+    xtermRef.current.refresh(0, xtermRef.current.rows - 1);
   }, [theme]);
 
   const handleOutput = useCallback((data: string) => {
