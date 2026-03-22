@@ -6,22 +6,31 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'shout - Watch developers work. Live.',
+  title: 'shout.run — Terminal sessions you can share',
   description:
-    'Watch developers code in real-time. Share your terminal with the world. The live streaming platform for developers.',
-  keywords: ['terminal', 'live coding', 'developer tools', 'streaming', 'pair programming'],
-  authors: [{ name: 'shout' }],
+    'Stream your terminal live, share replays, and embed sessions. Open-source terminal broadcasting for developers and AI agents.',
+  keywords: [
+    'terminal sharing',
+    'live terminal',
+    'terminal streaming',
+    'terminal replay',
+    'developer tools',
+    'terminal broadcasting',
+    'asciinema alternative',
+    'MCP server',
+  ],
+  authors: [{ name: 'shout.run' }],
   openGraph: {
-    title: 'shout - Watch developers work. Live.',
-    description: 'Watch developers code in real-time. Share your terminal with the world.',
+    title: 'shout.run — Terminal sessions you can share',
+    description: 'Stream your terminal live, share replays, and embed sessions.',
     url: 'https://shout.run',
-    siteName: 'shout',
+    siteName: 'shout.run',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'shout - Watch developers work. Live.',
-    description: 'Watch developers code in real-time. Share your terminal with the world.',
+    title: 'shout.run — Terminal sessions you can share',
+    description: 'Stream your terminal live, share replays, and embed sessions.',
   },
 };
 
@@ -47,7 +56,7 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="bg-shout-bg text-shout-text font-sans antialiased min-h-screen">
+      <body className="bg-shout-bg text-shout-text font-sans antialiased min-h-[100dvh]">
         <ThemeProvider>
           <Header />
           <main>{children}</main>
