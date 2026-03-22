@@ -7,7 +7,7 @@ import {
 import type { RecentSession } from './api';
 import type { Session, SessionSummary } from '@shout/shared';
 
-interface SessionWithUser extends Session {
+export interface SessionWithUser extends Session {
   username: string;
   avatarUrl: string;
 }

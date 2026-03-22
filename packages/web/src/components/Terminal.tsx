@@ -185,10 +185,8 @@ export function Terminal({ sessionId, isLive, sessionTitle, onViewerCountChange,
   useEffect(() => {
     if (!terminalRef.current) return;
 
-    const initialTheme = theme === 'light' ? LIGHT_THEME : DARK_THEME;
-
     const xterm = new XTerm({
-      theme: initialTheme,
+      theme: DARK_THEME,
       fontFamily: 'JetBrains Mono, Menlo, Monaco, Consolas, monospace',
       fontSize: 14,
       lineHeight: 1.2,

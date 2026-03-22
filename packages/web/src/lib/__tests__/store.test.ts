@@ -8,7 +8,7 @@ vi.mock('../api', () => ({
 
 vi.mock('@shout/shared', () => ({}));
 
-import { useStore } from '../store';
+import { useStore, type SessionWithUser } from '../store';
 import { fetchLiveSessions, fetchRecentSessions, fetchSession } from '../api';
 
 describe('store', () => {
@@ -94,7 +94,11 @@ describe('store', () => {
   });
 
   it('fetchSession returns cached session if ID matches', async () => {
-    const cachedSession = { id: 'cached-id', username: 'user', avatarUrl: '', title: 'Cached' } as any;
+    const cachedSession: SessionWithUser = {
+      id: 'cached-id', userId: 'u1', title: 'Cached', status: 'ended',
+      visibility: 'public', viewerCount: 0, tags: [], startedAt: new Date().toISOString(),
+      username: 'user', avatarUrl: '',
+    };
     useStore.setState({ currentSession: cachedSession });
 
     const result = await useStore.getState().fetchSession('cached-id');
@@ -104,8 +108,12 @@ describe('store', () => {
   });
 
   it('fetchSession sets isLoading during fetch', async () => {
-    const mockSession = { id: 'new-id', username: 'user', avatarUrl: '' };
-    vi.mocked(fetchSession).mockResolvedValue(mockSession as any);
+    const mockSession: SessionWithUser = {
+      id: 'new-id', userId: 'u1', title: '', status: 'ended',
+      visibility: 'public', viewerCount: 0, tags: [], startedAt: new Date().toISOString(),
+      username: 'user', avatarUrl: '',
+    };
+    vi.mocked(fetchSession).mockResolvedValue(mockSession);
 
     const fetchPromise = useStore.getState().fetchSession('new-id');
 
