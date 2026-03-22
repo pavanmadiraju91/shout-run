@@ -1,9 +1,27 @@
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import '@xterm/xterm/css/xterm.css';
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-shout-bg: var(--shout-bg);
+  --color-shout-surface: var(--shout-surface);
+  --color-shout-surface-hover: var(--shout-surface-hover);
+  --color-shout-border: var(--shout-border);
+  --color-shout-text: var(--shout-text);
+  --color-shout-text-secondary: var(--shout-text-secondary);
+  --color-shout-muted: var(--shout-muted);
+  --color-shout-accent: var(--shout-accent);
+  --color-shout-green: var(--shout-green);
+  --color-shout-red: var(--shout-red);
+  --color-shout-yellow: var(--shout-yellow);
+
+  --font-mono: 'JetBrains Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+
+  --animate-pulse-live: pulse-live 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-feed-in: feed-in 0.3s ease-out forwards;
+}
 
 :root {
   /* Dark theme (default) */
@@ -154,7 +172,12 @@ body {
   background: transparent;
 }
 
-/* Feed item stagger animation */
+/* Keyframes */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 @keyframes feed-in {
   from {
     opacity: 0;
@@ -164,17 +187,4 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
-}
-
-/* Screen-reader-only utility */
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
 }
