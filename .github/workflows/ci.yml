@@ -81,6 +81,9 @@ jobs:
       - name: Typecheck SDK
         run: pnpm --filter @shout/sdk run typecheck
 
+      - name: Build SDK (MCP depends on SDK types)
+        run: pnpm --filter @shout/sdk run build
+
       - name: Typecheck MCP
         run: pnpm --filter @shout/mcp run typecheck
 
