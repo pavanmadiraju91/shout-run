@@ -10,7 +10,7 @@ from mcp.server.fastmcp import FastMCP
 
 from shout_sdk import ShoutSession
 
-__version__ = "0.1.3"
+__version__ = "0.2.0"
 
 mcp = FastMCP(
     "shout",
@@ -174,6 +174,97 @@ async def shout_delete_session(session_id: str) -> str:
         return f"Failed to delete session: {e}"
 
     return f"Session {session_id} deleted."
+
+
+@mcp.tool()
+async def shout_search_sessions(
+    query: str,
+    tags: str = "",
+    status: str = "",
+    limit: int = 10,
+) -> str:
+    """Search for terminal broadcast sessions by query, tags, and status.
+
+    Args:
+        query: Search query (matches title and description).
+        tags: Comma-separated list of tags to filter by (any match). Optional.
+        status: Filter by session status — 'live' or 'ended'. Optional.
+        limit: Maximum number of results (1-50, default: 10).
+    """
+    api_key = _get_api_key()
+    if not api_key:
+        return "Error: SHOUT_API_KEY environment variable is not set."
+
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()] if tags else None
+    status_filter = status if status in ("live", "ended") else None
+
+    try:
+        results = await asyncio.to_thread(
+            ShoutSession.search_sessions,
+            api_key,
+            query,
+            tags=tag_list,
+            status=status_filter,
+            limit=limit,
+            api_url=_get_api_url(),
+        )
+    except Exception as e:
+        return f"Search failed: {e}"
+
+    if not results:
+        return f'No sessions found matching "{query}".'
+
+    lines = []
+    for s in results:
+        tags_str = f" [{', '.join(s.get('tags', []))}]" if s.get('tags') else ""
+        status_str = " (LIVE)" if s.get('status') == 'live' else ""
+        lines.append(
+            f"- {s['title']}{tags_str}{status_str}\n"
+            f"  ID: {s['id']} | by {s.get('username', 'unknown')} | {s.get('upvotes', 0)} upvotes"
+        )
+
+    return f"Found {len(results)} session(s):\n\n" + "\n\n".join(lines)
+
+
+@mcp.tool()
+async def shout_read_session(session_id: str) -> str:
+    """Read the plain-text transcript of a terminal broadcast session.
+
+    Args:
+        session_id: The session ID to read.
+    """
+    api_key = _get_api_key()
+    if not api_key:
+        return "Error: SHOUT_API_KEY environment variable is not set."
+
+    try:
+        content = await asyncio.to_thread(
+            ShoutSession.get_session_content,
+            api_key,
+            session_id,
+            api_url=_get_api_url(),
+        )
+    except Exception as e:
+        return f"Failed to read session: {e}"
+
+    session = content.get("session", {})
+    transcript = content.get("transcript", "")
+
+    tags_str = f"Tags: {', '.join(session.get('tags', []))}\n" if session.get('tags') else ""
+    header = (
+        f"Title: {session.get('title', 'Unknown')}\n"
+        f"By: {session.get('username', 'Unknown')}\n"
+        f"Status: {session.get('status', 'unknown')}\n"
+        f"{tags_str}"
+        f"Upvotes: {session.get('upvotes', 0)}\n"
+    )
+
+    # Truncate transcript if too long
+    max_len = 8000
+    if len(transcript) > max_len:
+        transcript = transcript[:max_len] + "\n\n... [transcript truncated]"
+
+    return f"{header}\n--- Transcript ---\n\n{transcript or '(empty)'}"
 
 
 def main():

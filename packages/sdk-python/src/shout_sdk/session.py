@@ -277,6 +277,100 @@ class ShoutSession:
                 error = str(resp.status_code)
             raise RuntimeError(f'Failed to delete session: {error}')
 
+    @staticmethod
+    def search_sessions(
+        api_key: str,
+        query: str,
+        *,
+        tags: list[str] | None = None,
+        status: str | None = None,
+        limit: int = 20,
+        cursor: str | None = None,
+        api_url: str = 'https://api.shout.run',
+    ) -> list[dict[str, Any]]:
+        """Search for sessions by query, tags, and status.
+
+        Args:
+            api_key: API key for authentication.
+            query: Search query (matches title and description).
+            tags: Optional list of tags to filter by (any match).
+            status: Optional status filter ('live' or 'ended').
+            limit: Maximum results (1-50, default: 20).
+            cursor: Cursor for pagination (session ID).
+            api_url: API base URL (default: https://api.shout.run).
+
+        Returns:
+            List of session dicts with id, title, description, tags, username, status, etc.
+
+        Raises:
+            RuntimeError: If the search request fails.
+        """
+        api_url = api_url.rstrip('/')
+        params: dict[str, str] = {'q': query}
+        if tags:
+            params['tags'] = ','.join(tags)
+        if status:
+            params['status'] = status
+        if limit:
+            params['limit'] = str(limit)
+        if cursor:
+            params['cursor'] = cursor
+
+        resp = requests.get(
+            f'{api_url}/api/sessions/search',
+            params=params,
+            timeout=30,
+        )
+        if not resp.ok:
+            try:
+                error = resp.json().get('error', str(resp.status_code))
+            except Exception:
+                error = str(resp.status_code)
+            raise RuntimeError(f'Search failed: {error}')
+
+        result = resp.json()
+        if not result.get('ok'):
+            raise RuntimeError(result.get('error', 'Search failed'))
+        return result.get('data', [])
+
+    @staticmethod
+    def get_session_content(
+        api_key: str,
+        session_id: str,
+        *,
+        api_url: str = 'https://api.shout.run',
+    ) -> dict[str, Any]:
+        """Get session metadata and plain-text transcript.
+
+        Args:
+            api_key: API key for authentication.
+            session_id: The session ID to fetch.
+            api_url: API base URL (default: https://api.shout.run).
+
+        Returns:
+            Dict with 'session' (metadata) and 'transcript' (plain text) keys.
+
+        Raises:
+            RuntimeError: If the request fails.
+        """
+        api_url = api_url.rstrip('/')
+        resp = requests.get(
+            f'{api_url}/api/sessions/{session_id}/content',
+            headers={'Authorization': f'Bearer {api_key}'},
+            timeout=30,
+        )
+        if not resp.ok:
+            try:
+                error = resp.json().get('error', str(resp.status_code))
+            except Exception:
+                error = str(resp.status_code)
+            raise RuntimeError(f'Failed to get session content: {error}')
+
+        result = resp.json()
+        if not result.get('ok') or not result.get('data'):
+            raise RuntimeError(result.get('error', 'Failed to get session content'))
+        return result['data']
+
     def __enter__(self) -> 'ShoutSession':
         return self
 

@@ -19,9 +19,14 @@ import type {
   ShoutSessionInfo,
   ShoutSessionState,
   ShoutSessionEvents,
+  SessionSearchResult,
+  SessionContent,
+  SearchSessionsOptions,
+  GetSessionContentOptions,
 } from './types.js';
 
 const MAX_CHUNK_BYTES = 64 * 1024; // 64 KB
+const DEFAULT_API_URL = 'https://api.shout.run';
 
 export class ShoutSession extends EventEmitter {
   private apiKey: string;
@@ -283,7 +288,94 @@ export class ShoutSession extends EventEmitter {
       }
     }
   }
+
+  // ── Static Methods for Search API ────────────────────────────
+
+  /**
+   * Search for sessions by query, tags, and status.
+   * @param apiKey - API key for authentication
+   * @param query - Search query (matches title and description)
+   * @param options - Optional filters and pagination
+   * @returns Array of matching sessions
+   */
+  static async searchSessions(
+    apiKey: string,
+    query: string,
+    options?: SearchSessionsOptions,
+  ): Promise<SessionSearchResult[]> {
+    const apiUrl = options?.apiUrl ?? DEFAULT_API_URL;
+
+    const params = new URLSearchParams({ q: query });
+    if (options?.tags && options.tags.length > 0) {
+      params.set('tags', options.tags.join(','));
+    }
+    if (options?.status) {
+      params.set('status', options.status);
+    }
+    if (options?.limit) {
+      params.set('limit', String(options.limit));
+    }
+    if (options?.cursor) {
+      params.set('cursor', options.cursor);
+    }
+
+    const response = await fetch(`${apiUrl}/api/sessions/search?${params.toString()}`);
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(error.error ?? `Search failed: ${response.status}`);
+    }
+
+    const result = (await response.json()) as ApiResponse<SessionSearchResult[]>;
+    if (!result.ok || !result.data) {
+      throw new Error(result.error ?? 'Search failed');
+    }
+
+    return result.data;
+  }
+
+  /**
+   * Get the content (metadata + plain-text transcript) of a session.
+   * @param apiKey - API key for authentication
+   * @param sessionId - Session ID to fetch
+   * @param options - Optional API URL override
+   * @returns Session metadata and transcript
+   */
+  static async getSessionContent(
+    apiKey: string,
+    sessionId: string,
+    options?: GetSessionContentOptions,
+  ): Promise<SessionContent> {
+    const apiUrl = options?.apiUrl ?? DEFAULT_API_URL;
+
+    const response = await fetch(`${apiUrl}/api/sessions/${sessionId}/content`, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as { error?: string };
+      throw new Error(error.error ?? `Failed to get session content: ${response.status}`);
+    }
+
+    const result = (await response.json()) as ApiResponse<SessionContent>;
+    if (!result.ok || !result.data) {
+      throw new Error(result.error ?? 'Failed to get session content');
+    }
+
+    return result.data;
+  }
 }
 
 // Re-export types for convenience
-export type { ShoutSessionOptions, ShoutSessionInfo, ShoutSessionState, ShoutSessionEvents };
+export type {
+  ShoutSessionOptions,
+  ShoutSessionInfo,
+  ShoutSessionState,
+  ShoutSessionEvents,
+  SessionSearchResult,
+  SessionContent,
+  SearchSessionsOptions,
+  GetSessionContentOptions,
+};
