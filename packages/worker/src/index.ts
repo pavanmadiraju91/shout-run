@@ -5,6 +5,7 @@ import { auth } from './routes/auth.js';
 import { sessionsRouter } from './routes/sessions.js';
 import { oembedRouter } from './routes/oembed.js';
 import { keysRouter } from './routes/keys.js';
+import { purgeDeletedSessions } from './lib/purge.js';
 
 // Re-export Durable Object
 export { SessionHub } from './durable-objects/SessionHub.js';
@@ -47,4 +48,10 @@ app.onError((err, c) => {
 });
 
 // Export for Cloudflare Workers
-export default app;
+export default {
+  fetch: app.fetch,
+
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    await purgeDeletedSessions(env);
+  },
+};

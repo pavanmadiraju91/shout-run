@@ -155,6 +155,13 @@ export class SessionHub implements DurableObject {
       return this.handleViewerUpgrade(request);
     }
 
+    // Cleanup: delete all DO storage (called during hard-delete purge)
+    if (path === '/cleanup' && request.method === 'DELETE') {
+      await this.state.storage.deleteAlarm();
+      await this.state.storage.deleteAll();
+      return new Response('OK', { status: 200 });
+    }
+
     return new Response('Not Found', { status: 404 });
   }
 
