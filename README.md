@@ -1,32 +1,22 @@
-<div align="center">
-  <a href="https://shout.run">
-    <img src="https://shout.run/logo.png" alt="shout.run" width="120" />
-  </a>
-  <h1>shout</h1>
-  <p><strong>Live terminal broadcasting for developers</strong></p>
-  <p>Broadcast your terminal to the world. Live.</p>
-  <p>
-    <a href="https://www.npmjs.com/package/shout-run"><img src="https://img.shields.io/npm/v/shout-run" alt="npm version" /></a>
-    <a href="https://www.npmjs.com/package/shout-run-sdk"><img src="https://img.shields.io/npm/v/shout-run-sdk?label=sdk" alt="SDK version" /></a>
-    <a href="https://pypi.org/project/shout-run-sdk/"><img src="https://img.shields.io/pypi/v/shout-run-sdk?label=python-sdk" alt="PyPI version" /></a>
-    <a href="https://github.com/pavanmadiraju91/shout-run/actions/workflows/ci.yml"><img src="https://github.com/pavanmadiraju91/shout-run/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
-    <a href="https://github.com/pavanmadiraju91/shout-run/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="license" /></a>
-  </p>
-</div>
+# shout
 
----
+Live terminal broadcasting. Stream your terminal to the web, share replays, embed sessions.
 
-## The Gap
+[![npm](https://img.shields.io/npm/v/shout-run)](https://www.npmjs.com/package/shout-run)
+[![SDK](https://img.shields.io/npm/v/shout-run-sdk?label=sdk)](https://www.npmjs.com/package/shout-run-sdk)
+[![Python SDK](https://img.shields.io/pypi/v/shout-run-sdk?label=python-sdk)](https://pypi.org/project/shout-run-sdk/)
+[![CI](https://github.com/pavanmadiraju91/shout-run/actions/workflows/ci.yml/badge.svg)](https://github.com/pavanmadiraju91/shout-run/actions/workflows/ci.yml)
+[![MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
-| Tool | What it is | Analogy |
-|------|-----------|---------|
-| **tmate** | Private terminal sharing for pair programming | Zoom call |
-| **asciinema** | Record and replay terminal sessions | YouTube video |
-| **shout** | Live public terminal broadcasting | Twitch stream |
+## What is this
 
-**shout** fills the gap between private collaboration and recorded content. Share your terminal with the world in real-time.
+**shout** broadcasts your terminal session over the web in real time. Viewers watch in a browser — no installs, no screen sharing, no latency from video encoding. When the session ends, the recording is available for replay and export.
 
-## Quick Start
+Think of it like Twitch for your terminal. [tmate](https://tmate.io/) is for private pair programming, [asciinema](https://asciinema.org/) is for recorded demos — shout is for live public broadcasting with an audience.
+
+Website: [shout.run](https://shout.run)
+
+## Quick start
 
 ```bash
 npm install -g shout-run
@@ -34,56 +24,66 @@ shout login
 shout
 ```
 
-That's it. Your terminal is live. Viewers watch at `https://shout.run/<you>/<sessionId>`.
+Your terminal is now live. Viewers watch at `shout.run/<you>/<sessionId>`.
 
-## What you can do
+## Usage
 
-### Interactive broadcasting
+### Interactive mode
 
-Run `shout` with no arguments and it spawns a full PTY shell. Everything you type and see goes out live.
+Running `shout` with no arguments spawns a PTY shell. Everything you type and see goes out live.
 
 ```bash
 shout                          # prompts for title and visibility
 shout -t "building my app"     # skip the title prompt
-shout -v private               # unlisted — link only
+shout -v private               # unlisted session, link-only access
 ```
 
-### Pipe any command
+### Pipe mode
+
+When stdin is piped, shout detects it and broadcasts the output directly.
 
 ```bash
 npm run build | shout
 pytest -v | shout
-kubectl apply -f deploy.yaml | shout
 tail -f /var/log/app.log | shout
 ```
 
-When stdin is piped, shout detects it automatically. No subcommand needed.
-
 ### Session visibility
 
-| Visibility | Behavior |
-|------------|----------|
-| `public` | Listed on the live feed, anyone can watch |
-| `followers` | Visible only to your followers |
-| `private` | Unlisted, only people with the direct link. Live-only: no replay or export after the session ends |
+| Visibility | What happens |
+|------------|-------------|
+| `public` | Listed on the feed, anyone can watch |
+| `followers` | Only your followers see it |
+| `private` | Unlisted. Live-only — no replay after it ends |
 
-### Replay and late join
+### Replay
 
-Late joiners receive the last 100 chunks from a ring buffer so they catch up instantly. After a session ends, the full recording is available for replay and can be exported as asciicast v2 (`.cast`) files. Private sessions are live-only — no replay data is stored, and nothing is persisted after the session ends.
+After a session ends, the full recording is available for replay at the same URL. Late joiners during a live session receive a terminal state snapshot so they see the current screen immediately. Private sessions don't store replay data.
 
-### Upvoting and live feed
+### Embed
 
-The homepage shows a HN-style tabbed feed of live and recent sessions, sorted by upvotes. Viewers can upvote sessions anonymously (deduplicated per voter via KV).
+Drop a session into a blog post, docs page, or README:
 
-### Embeddable player
+```html
+<iframe
+  src="https://shout.run/embed/SESSION_ID"
+  width="800" height="500"
+  frameborder="0" allowfullscreen>
+</iframe>
+```
 
-Embed session replays in blog posts, docs, or READMEs. See the [Embed](#embed) section below.
+| Param | Default | What it does |
+|-------|---------|-------------|
+| `autoplay` | `1` | `0` to pause on load |
+| `speed` | `1` | Playback speed multiplier |
+| `t` | `0` | Start time in seconds |
+| `controls` | `1` | `0` to hide the player bar |
 
-## SDKs and MCP servers
+## SDKs
 
-Beyond the CLI, you can broadcast programmatically from scripts, CI pipelines, and AI agents.
+Broadcast programmatically from scripts, CI pipelines, or AI agents.
 
-### TypeScript SDK
+### TypeScript
 
 ```bash
 npm install shout-run-sdk
@@ -99,20 +99,13 @@ const session = new ShoutSession({
 
 const info = await session.start();
 console.log(`Live at: ${info.url}`);
-
 session.write('Hello from the SDK!\r\n');
-
 await session.end();
 ```
 
-The SDK handles the WebSocket connection, binary framing, buffering, and reconnection. You call `write()` and forget about the rest.
+Full reference: [`packages/sdk/README.md`](packages/sdk/README.md)
 
-Methods: `start()`, `write(data)`, `resize(cols, rows)`, `end()`
-Events: `connected`, `disconnected`, `reconnecting`, `viewers`, `error`, `stateChange`
-
-Full API reference: [`packages/sdk/README.md`](packages/sdk/README.md)
-
-### Python SDK
+### Python
 
 ```bash
 pip install shout-run-sdk
@@ -125,18 +118,15 @@ with ShoutSession(api_key="shout_sk_...") as session:
     info = session.start(title="My Build")
     print(f"Live at: {info['url']}")
     session.write("Hello from Python!\r\n")
-    # session.end() called automatically
 ```
 
-Works as a context manager. Same capabilities as the TypeScript SDK.
+Full reference: [`packages/sdk-python/README.md`](packages/sdk-python/README.md)
 
-Full API reference: [`packages/sdk-python/README.md`](packages/sdk-python/README.md)
+## MCP servers
 
-### TypeScript MCP server
+Let AI agents (Claude Code, Cursor, Windsurf) broadcast their terminal work. Available in TypeScript and Python.
 
-Lets AI agents (Claude Code, Cursor, Windsurf) broadcast their work. Runs via npx, no global install needed.
-
-Add to your MCP client settings:
+### TypeScript MCP
 
 ```json
 {
@@ -144,21 +134,13 @@ Add to your MCP client settings:
     "shout": {
       "command": "npx",
       "args": ["-y", "shout-run-mcp"],
-      "env": {
-        "SHOUT_API_KEY": "shout_sk_..."
-      }
+      "env": { "SHOUT_API_KEY": "shout_sk_..." }
     }
   }
 }
 ```
 
-**Exposed tools:** `shout_start_broadcast`, `shout_write`, `shout_end_broadcast`, `shout_broadcast_status`, `shout_delete_session`
-
-Docs: [`packages/mcp/README.md`](packages/mcp/README.md)
-
-### Python MCP server
-
-Same tools as the TypeScript MCP server, runs with `uvx` (or `pip install shout-run-mcp`).
+### Python MCP
 
 ```json
 {
@@ -166,50 +148,24 @@ Same tools as the TypeScript MCP server, runs with `uvx` (or `pip install shout-
     "shout": {
       "command": "uvx",
       "args": ["shout-run-mcp"],
-      "env": {
-        "SHOUT_API_KEY": "shout_sk_..."
-      }
+      "env": { "SHOUT_API_KEY": "shout_sk_..." }
     }
   }
 }
 ```
 
-Docs: [`packages/mcp-python/README.md`](packages/mcp-python/README.md)
+Exposed tools: `shout_start_broadcast`, `shout_write`, `shout_end_broadcast`, `shout_broadcast_status`, `shout_delete_session`
 
-### Getting an API key
+Docs: [`packages/mcp/README.md`](packages/mcp/README.md) and [`packages/mcp-python/README.md`](packages/mcp-python/README.md)
+
+### API keys
 
 ```bash
-npm install -g shout-run
 shout login
 shout api-key create "My Agent"
 ```
 
-The key is printed once. Save it somewhere safe. Keys start with `shout_sk_`.
-
-You can list your keys with `shout api-key list` and revoke one with `shout api-key revoke <id>`.
-
-## Embed
-
-Embed session replays anywhere with an iframe:
-
-```html
-<iframe
-  src="https://shout.run/embed/SESSION_ID"
-  width="800"
-  height="500"
-  frameborder="0"
-  allowfullscreen
-></iframe>
-```
-
-### URL parameters
-
-| Param | Default | Description |
-|-------|---------|-------------|
-| `autoplay` | `1` | Set to `0` to pause on load |
-| `speed` | `1` | Playback speed multiplier |
-| `t` | `0` | Start time in seconds |
-| `controls` | `1` | Set to `0` to hide the player bar |
+Keys start with `shout_sk_`. List with `shout api-key list`, revoke with `shout api-key revoke <id>`.
 
 ## CLI reference
 
@@ -217,175 +173,140 @@ Embed session replays anywhere with an iframe:
 Usage: shout [options] [command]
 
 Commands:
-  broadcast [options]    Start broadcasting your terminal (default)
+  broadcast [options]    Start broadcasting (default command)
   login                  Authenticate with GitHub
   logout                 Remove stored credentials
-  whoami                 Display current logged-in user
-  help [command]         Display help for command
+  whoami                 Show current user
+  api-key                Manage API keys
+  help [command]         Display help
 
 Broadcast options:
   -t, --title <title>            Session title
-  -v, --visibility <visibility>  Visibility: public, followers, private
+  -v, --visibility <visibility>  public, followers, or private
   --tags <tags>                  Comma-separated tags
 ```
-
-When stdin is piped, `broadcast` is selected automatically.
 
 ## Architecture
 
 ```
 packages/
-  shared/       @shout/shared    Types, binary protocol, constants (build first)
-  cli/          @shout/cli       Commander.js CLI — published as `shout-run` on npm
-  sdk/          @shout/sdk       TypeScript SDK — published as `shout-run-sdk` on npm
-  mcp/          @shout/mcp       TypeScript MCP server — published as `shout-run-mcp` on npm
-  worker/       @shout/worker    Cloudflare Workers + Durable Objects (Hono, Drizzle, Turso)
-  web/          @shout/web       Next.js 15 / React 19 frontend (xterm.js, Zustand)
-  sdk-python/                    Python SDK — published as `shout-run-sdk` on PyPI
-  mcp-python/                    Python MCP server — published as `shout-run-mcp` on PyPI
+  shared/       Types, binary protocol, constants (build first)
+  cli/          CLI tool — published as shout-run on npm
+  sdk/          TypeScript SDK — shout-run-sdk on npm
+  mcp/          TypeScript MCP server — shout-run-mcp on npm
+  worker/       Cloudflare Workers + Durable Objects backend
+  web/          Next.js 15 / React 19 frontend
+  sdk-python/   Python SDK — shout-run-sdk on PyPI
+  mcp-python/   Python MCP server — shout-run-mcp on PyPI
+  vt-wasm/      Rust WASM terminal parser (late-join snapshots)
 ```
 
-### Data flow
+### How data flows
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                                                                         │
-│   Your Terminal             Cloudflare Worker              Viewers      │
-│                                                                         │
-│   ┌───────────┐            ┌─────────────────┐          ┌───────────┐  │
-│   │  shout    │── binary ─>│  SessionHub DO  │<─────────│  Next.js  │  │
-│   │  CLI/SDK  │   frames   │  (fan-out hub)  │  binary  │  + xterm  │  │
-│   └───────────┘            └────────┬────────┘  frames  └───────────┘  │
-│       │                             │                        │         │
-│   binary encoding           Turso DB (sessions,        real-time       │
-│                              users, follows)            decoding        │
-│                                                                         │
-└─────────────────────────────────────────────────────────────────────────┘
-```
+The CLI captures terminal output from a PTY, encodes it into a compact binary frame protocol, and sends it over WebSocket to a Cloudflare Worker. A Durable Object (SessionHub) fans the frames out to all connected viewer WebSockets. The Next.js frontend decodes frames and renders them into an xterm.js terminal.
 
-1. The CLI or SDK captures terminal output (PTY for interactive, stdin for piped, `write()` for programmatic)
-2. Data is encoded into a compact binary frame protocol and sent over WebSocket
-3. A Cloudflare Durable Object (SessionHub) fans out frames to all connected viewers
-4. The Next.js web app decodes frames and renders them into an xterm.js terminal
+SDKs and MCP servers do the same thing programmatically.
 
-### Binary WebSocket protocol
+### Binary protocol
 
-Every frame: `[type: 1 byte][timestamp: 4 bytes uint32][payload: variable]`
+Every WebSocket message: `[type: 1 byte][timestamp: 4 bytes][payload: variable]`
 
-| Frame type | Byte | Description |
-|------------|------|-------------|
+| Type | Byte | Purpose |
+|------|------|---------|
 | Output | `0x01` | Terminal output data |
 | Meta | `0x02` | Session metadata |
 | ViewerCount | `0x03` | Current viewer count |
 | End | `0x04` | Session ended |
-| Ping | `0x05` | Keepalive ping |
-| Pong | `0x06` | Keepalive pong |
+| Ping | `0x05` | Keepalive |
+| Pong | `0x06` | Keepalive response |
 | Error | `0x07` | Error message |
 | Resize | `0x08` | Terminal dimensions changed |
+| Snapshot | `0x09` | Terminal state for late joiners |
 
-### Key internals
+### Replay storage
 
-- **SessionHub Durable Object**: one instance per broadcast session. Accepts a single broadcaster WebSocket and many viewer WebSockets (using the hibernation API). Maintains a 100-chunk ring buffer for late joiners. Alarm-based heartbeat pings the broadcaster every 30 seconds; 60 seconds of silence triggers cleanup.
-- **Three-tier replay storage**: during a live session, chunks accumulate in DO memory (capped at 50 MB). On session end, they're flushed to DO storage, then persisted to R2 as JSON. Replay requests follow a DO memory -> DO storage -> R2 fallback chain, so replays survive hibernation and eviction.
-- **Authentication**: GitHub device flow routed through the worker (`/api/auth/device-code`, `/api/auth/token`). The worker exchanges the code for a GitHub token, creates or finds the user, and returns a JWT. The CLI stores credentials via keytar (OS keychain) with a fallback to `~/.shout/config.json`. SDK/MCP clients authenticate with API keys (`shout_sk_...`).
-- **Rate limiting**: bytes-per-second throttling (100 KB/s default) in both the CLI and Durable Object. Database-backed daily session limits per user. KV-backed vote deduplication. Large output is chunked into 64 KB WebSocket messages to stay under Cloudflare's 1 MB frame limit.
+During a live session, binary frames accumulate in DO memory (`pendingChunks`). Every 30 seconds, an alarm flushes them to R2 as numbered part files. On session end, parts are consolidated into a single `replay.json` with a `manifest.json` index. Replay requests read from R2 with a DO storage fallback for older sessions.
 
-## Self-Hosting
+Export produces asciicast v2 `.cast` files (NDJSON format).
+
+### Security
+
+The CLI strips 26 sensitive environment variable prefixes before spawning the broadcast shell — things like `AWS_SECRET`, `GITHUB_TOKEN`, `OPENAI_API_KEY`, `STRIPE_SECRET`, and others. The spawned shell gets a clean environment with `SHOUT_SESSION=1` set.
+
+Bytes-per-second throttling (100 KB/s) runs in both the CLI and the Durable Object. Sessions are capped at 4 hours and 50 per user per day.
+
+## Self-hosting
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) >= 20
-- [pnpm](https://pnpm.io/) >= 9
-- A [Cloudflare](https://cloudflare.com/) account (Workers free tier works)
-- A [Turso](https://turso.tech/) database
-- A [GitHub OAuth App](https://github.com/settings/developers)
-- A [Vercel](https://vercel.com/) account (for the web app)
+- Node.js >= 20, pnpm >= 9
+- A Cloudflare account (Workers free tier works)
+- A Turso database
+- A GitHub OAuth App
+- Vercel (for the web frontend)
 
-### 1. Clone and install
+### Setup
 
 ```bash
 git clone https://github.com/pavanmadiraju91/shout-run.git
 cd shout-run
 pnpm install
-```
-
-### 2. Set up Turso
-
-```bash
-turso db create shout
-turso db tokens create shout
-```
-
-### 3. Create a GitHub OAuth App
-
-Go to [GitHub Developer Settings](https://github.com/settings/developers) and create a new OAuth App. Note the Client ID and Client Secret.
-
-### 4. Configure environment
-
-```bash
 cp .env.example .env
 ```
 
-Fill in the values:
-
-| Variable | Description |
-|----------|-------------|
-| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth App client secret |
-| `TURSO_URL` | Turso database URL |
-| `TURSO_AUTH_TOKEN` | Turso auth token |
-| `JWT_SECRET` | Random secret (`openssl rand -hex 32`) |
-| `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account ID |
-| `CLOUDFLARE_API_TOKEN` | Cloudflare API token |
-| `NEXT_PUBLIC_API_URL` | Public URL of your deployed worker |
-| `NEXT_PUBLIC_WS_URL` | WebSocket URL of your deployed worker |
-
-### 5. Set worker secrets
+### Worker secrets
 
 ```bash
 cd packages/worker
+wrangler secret put TURSO_URL
 wrangler secret put TURSO_AUTH_TOKEN
 wrangler secret put JWT_SECRET
 wrangler secret put GITHUB_CLIENT_ID
 wrangler secret put GITHUB_CLIENT_SECRET
 ```
 
-### 6. Deploy the worker
+### Environment variables
+
+| Variable | What it is |
+|----------|-----------|
+| `GITHUB_CLIENT_ID` | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth App client secret |
+| `TURSO_URL` | Turso database URL |
+| `TURSO_AUTH_TOKEN` | Turso auth token |
+| `JWT_SECRET` | Random secret for signing JWTs |
+| `NEXT_PUBLIC_API_URL` | Public URL of deployed worker |
+| `NEXT_PUBLIC_WS_URL` | WebSocket URL of deployed worker |
+
+### Deploy
 
 ```bash
-pnpm --filter @shout/worker deploy
-```
-
-### 7. Deploy the web app
-
-```bash
-cd packages/web
-vercel deploy --prod
+pnpm --filter @shout/worker deploy   # Cloudflare Worker
+cd packages/web && vercel deploy      # Web frontend
 ```
 
 ## Development
 
 ```bash
-pnpm install          # install all deps
-pnpm dev              # run all dev servers in parallel
-pnpm build            # build all packages (Turborepo handles ordering)
-pnpm lint             # lint all packages
-pnpm typecheck        # type-check all packages
-pnpm clean            # remove all dist/node_modules
+pnpm install          # install everything
+pnpm dev              # all dev servers in parallel
+pnpm build            # build all packages (Turborepo orders them)
+pnpm lint             # lint
+pnpm typecheck        # type-check
 ```
 
-Build individual packages with `--filter`:
+Per-package:
 
 ```bash
 pnpm --filter @shout/shared build    # types + protocol (build first)
-pnpm --filter @shout/cli build       # CLI (tsup, inlines shared)
-pnpm --filter @shout/sdk build       # TypeScript SDK (tsup)
-pnpm --filter @shout/mcp build       # TypeScript MCP server (tsup, needs sdk)
-pnpm --filter @shout/worker dev      # Cloudflare Worker dev server
-pnpm --filter @shout/web dev         # Next.js dev server on :3000
+pnpm --filter @shout/cli build       # CLI
+pnpm --filter @shout/sdk build       # TypeScript SDK
+pnpm --filter @shout/mcp build       # MCP server (needs SDK built)
+pnpm --filter @shout/worker dev      # Worker dev server
+pnpm --filter @shout/web dev         # Next.js on :3000
+pnpm --filter @shout/worker test     # Vitest tests
 ```
 
-Python packages:
+Python:
 
 ```bash
 cd packages/sdk-python && python -m build
@@ -404,24 +325,11 @@ cd packages/mcp-python && python -m build
 
 ## Contributing
 
-Contributions are welcome!
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+1. Fork the repo
+2. Create a feature branch
+3. Make your changes
+4. Open a pull request
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-  <p>Built with <a href="https://workers.cloudflare.com/">Cloudflare Workers</a>, <a href="https://turso.tech/">Turso</a>, <a href="https://nextjs.org/">Next.js</a>, and <a href="https://xtermjs.org/">xterm.js</a></p>
-  <p>
-    <a href="https://shout.run">Website</a> &middot;
-    <a href="https://github.com/pavanmadiraju91/shout-run/issues">Issues</a>
-  </p>
-</div>
+[MIT](LICENSE)
