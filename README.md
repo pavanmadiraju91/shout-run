@@ -101,6 +101,13 @@ const info = await session.start();
 console.log(`Live at: ${info.url}`);
 session.write('Hello from the SDK!\r\n');
 await session.end();
+
+// Search for sessions
+const results = await ShoutSession.searchSessions('shout_sk_...', 'deploy');
+
+// Read a session transcript (ANSI codes stripped)
+const content = await ShoutSession.getSessionContent('shout_sk_...', 'session-id');
+console.log(content.transcript);
 ```
 
 Full reference: [`packages/sdk/README.md`](packages/sdk/README.md)
@@ -118,6 +125,13 @@ with ShoutSession(api_key="shout_sk_...") as session:
     info = session.start(title="My Build")
     print(f"Live at: {info['url']}")
     session.write("Hello from Python!\r\n")
+
+# Search for sessions
+results = ShoutSession.search_sessions("shout_sk_...", "deploy")
+
+# Read a session transcript (ANSI codes stripped)
+content = ShoutSession.get_session_content("shout_sk_...", "session-id")
+print(content["transcript"])
 ```
 
 Full reference: [`packages/sdk-python/README.md`](packages/sdk-python/README.md)
@@ -154,7 +168,7 @@ Let AI agents (Claude Code, Cursor, Windsurf) broadcast their terminal work. Ava
 }
 ```
 
-Exposed tools: `shout_start_broadcast`, `shout_write`, `shout_end_broadcast`, `shout_broadcast_status`, `shout_delete_session`
+Exposed tools: `shout_start_broadcast`, `shout_write`, `shout_end_broadcast`, `shout_broadcast_status`, `shout_delete_session`, `shout_search_sessions`, `shout_read_session`
 
 Docs: [`packages/mcp/README.md`](packages/mcp/README.md) and [`packages/mcp-python/README.md`](packages/mcp-python/README.md)
 
