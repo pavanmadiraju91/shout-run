@@ -31,6 +31,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'shout.run — Terminal sessions you can share',
     description: 'Stream your terminal live, share replays, and embed sessions.',
+    images: ['/opengraph-image'],
   },
 };
 

@@ -3,6 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "description": "Live terminal broadcasting for developers",
+  "homepage": "https://shout.run",
+  "author": "pavanmadiraju91",
+  "keywords": [
+    "terminal",
+    "broadcasting",
+    "live",
+    "developer-tools",
+    "cli",
+    "pty",
+    "websocket",
+    "xterm"
+  ],
   "repository": {
     "type": "git",
     "url": "https://github.com/pavanmadiraju91/shout-run.git"
