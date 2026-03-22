@@ -194,6 +194,15 @@ export default function HomePage() {
           <p className="text-shout-muted text-lg sm:text-xl max-w-xl">
             Live streaming, replay, embed.
           </p>
+          <p className="text-shout-muted text-sm sm:text-base max-w-xl mt-4 leading-relaxed">
+            shout is an open-source terminal broadcasting tool. Install the CLI, run{' '}
+            <code className="bg-shout-surface px-1 py-0.5 rounded text-shout-text text-[13px] font-mono">shout</code>,
+            and anyone with the link can watch your terminal in real time — no screen-sharing
+            software required. Sessions are recorded automatically so viewers can replay them
+            later, and every recording can be embedded on any web page or exported as an
+            asciicast v2 file. Built for developers, DevRel, and AI agents via SDKs and MCP
+            servers.
+          </p>
         </section>
 
         {/* ── How it works ──────────────────────────────── */}

@@ -4,6 +4,9 @@ import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy - shout',
+  alternates: {
+    canonical: '/privacy',
+  },
 };
 
 export default function PrivacyPage() {

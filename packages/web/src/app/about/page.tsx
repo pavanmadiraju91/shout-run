@@ -6,6 +6,9 @@ export const metadata: Metadata = {
   title: 'Docs - shout',
   description:
     'Documentation for shout — CLI installation, SDKs, MCP servers, embedding, and API reference.',
+  alternates: {
+    canonical: '/about',
+  },
 };
 
 function Code({ children }: { children: React.ReactNode }) {
@@ -40,6 +43,7 @@ const NAV = [
   { id: 'api-keys', label: 'API Keys' },
   { id: 'embedding', label: 'Embedding' },
   { id: 'open-source', label: 'Open Source' },
+  { id: 'faq', label: 'FAQ' },
 ];
 
 export default function AboutPage() {
@@ -130,7 +134,7 @@ export default function AboutPage() {
                 ],
                 [
                   'Privacy controls',
-                  'Public, followers-only, or private. Private sessions leave no replay data.',
+                  'Public or private. Private sessions leave no replay data.',
                 ],
               ] as const
             ).map(([title, desc]) => (
@@ -273,6 +277,8 @@ session.end()`}
                     ['shout_end_broadcast', 'End the current session'],
                     ['shout_broadcast_status', 'Check session status and current viewer count'],
                     ['shout_delete_session', 'Delete a session that has ended'],
+                    ['shout_search_sessions', 'Search sessions by title, tags, or status'],
+                    ['shout_read_session', 'Read the plain-text transcript of a session'],
                   ] as const
                 ).map(([tool, desc]) => (
                   <tr key={tool} className="border-b border-shout-border/40">
@@ -367,6 +373,131 @@ session.end()`}
             </a>
             .
           </p>
+        </section>
+
+        {/* ── FAQ ─────────────────────────────────────── */}
+        <section id="faq" className="mb-16 scroll-mt-20">
+          <h2 className="text-xl font-semibold text-shout-text mb-6">Frequently Asked Questions</h2>
+
+          <div className="space-y-6">
+            {(
+              [
+                [
+                  'What is shout?',
+                  'shout is an open-source terminal broadcasting tool. It lets developers stream their terminal output in real time to anyone with a browser, record sessions for replay, and embed recordings on any web page.',
+                ],
+                [
+                  'How does shout work?',
+                  'The CLI captures your terminal output via a pseudo-terminal (PTY), encodes it into a compact binary WebSocket protocol, and streams it through a Cloudflare Worker to viewers running xterm.js in the browser. Late joiners receive a terminal state snapshot so they see the current screen immediately.',
+                ],
+                [
+                  'Is shout free?',
+                  'Yes. shout is completely free and open-source under the MIT license. There are no paid tiers, usage fees, or premium features.',
+                ],
+                [
+                  'What terminals are supported?',
+                  'shout works with any terminal emulator on Linux, macOS, and Windows. It captures output from your default shell (bash, zsh, fish, PowerShell, etc.) via PTY.',
+                ],
+                [
+                  'How long can a session last?',
+                  'Sessions can last up to 4 hours. Output is rate-limited to 100 KB/s to ensure a smooth experience for viewers. There is a daily cap of 50 sessions per user.',
+                ],
+                [
+                  'Is my data private?',
+                  'You control session visibility: public or private. Private sessions leave no replay data on the server.',
+                ],
+                [
+                  'Can AI agents use shout?',
+                  'Yes. TypeScript and Python SDKs let you broadcast programmatically, and MCP servers (compatible with Claude, Cursor, and other MCP clients) expose tools like shout_start_broadcast, shout_write, shout_search_sessions, and shout_read_session.',
+                ],
+                [
+                  'How do I embed a session?',
+                  'Use an iframe pointing to https://shout.run/embed/SESSION_ID. URL parameters control autoplay, playback speed, start time, and whether the player bar is visible. Platforms that support oEmbed will auto-embed the player when you paste a shout.run link.',
+                ],
+              ] as const
+            ).map(([q, a]) => (
+              <div key={q}>
+                <h3 className="text-sm font-medium text-shout-text mb-1">{q}</h3>
+                <p className="text-sm text-shout-muted leading-relaxed">{a}</p>
+              </div>
+            ))}
+          </div>
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'FAQPage',
+                mainEntity: [
+                  {
+                    '@type': 'Question',
+                    name: 'What is shout?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'shout is an open-source terminal broadcasting tool. It lets developers stream their terminal output in real time to anyone with a browser, record sessions for replay, and embed recordings on any web page.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How does shout work?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'The CLI captures your terminal output via a pseudo-terminal (PTY), encodes it into a compact binary WebSocket protocol, and streams it through a Cloudflare Worker to viewers running xterm.js in the browser. Late joiners receive a terminal state snapshot so they see the current screen immediately.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Is shout free?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes. shout is completely free and open-source under the MIT license. There are no paid tiers, usage fees, or premium features.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'What terminals are supported?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'shout works with any terminal emulator on Linux, macOS, and Windows. It captures output from your default shell (bash, zsh, fish, PowerShell, etc.) via PTY.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How long can a session last?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Sessions can last up to 4 hours. Output is rate-limited to 100 KB/s to ensure a smooth experience for viewers. There is a daily cap of 50 sessions per user.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Is my data private?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'You control session visibility: public or private. Private sessions leave no replay data on the server.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'Can AI agents use shout?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Yes. TypeScript and Python SDKs let you broadcast programmatically, and MCP servers expose tools like shout_start_broadcast, shout_write, shout_search_sessions, and shout_read_session.',
+                    },
+                  },
+                  {
+                    '@type': 'Question',
+                    name: 'How do I embed a session?',
+                    acceptedAnswer: {
+                      '@type': 'Answer',
+                      text: 'Use an iframe pointing to https://shout.run/embed/SESSION_ID. URL parameters control autoplay, playback speed, start time, and whether the player bar is visible. Platforms that support oEmbed will auto-embed the player when you paste a shout.run link.',
+                    },
+                  },
+                ],
+              }),
+            }}
+          />
         </section>
       </div>
 
