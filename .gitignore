@@ -17,3 +17,12 @@ coverage/
 packages/vt-wasm/pkg/
 packages/vt-wasm/target/
 packages/worker/src/lib/vt-wasm/
+
+# Claude Code local artifacts (skills/ is tracked)
+.claude/plans/
+.claude/memory/
+.claude/projects/
+.claude/scheduled_tasks.lock
+
+# Playwright MCP
+.playwright-mcp/
