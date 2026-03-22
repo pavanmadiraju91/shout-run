@@ -187,11 +187,11 @@ export default function HomePage() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* ── Hero ──────────────────────────────────────── */}
-        <section ref={heroRef} className="py-10 sm:py-14">
-          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight mb-3">
-            Terminal sessions you can share.
+        <section ref={heroRef} className="py-12 sm:py-20">
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-3 max-w-2xl">
+            Terminal sessions you can <span className="text-shout-green">share.</span>
           </h1>
-          <p className="text-shout-muted text-base sm:text-lg max-w-lg">
+          <p className="text-shout-muted text-lg sm:text-xl max-w-xl">
             Live streaming, replay, embed.
           </p>
         </section>
@@ -237,7 +237,7 @@ export default function HomePage() {
               <span className="text-sm font-medium text-shout-text flex-shrink-0">Share</span>
               <div className="flex items-center bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
                 <span className="text-shout-text truncate">
-                  shout.run/<span className="text-shout-accent">you</span>/abc123
+                  <span className="text-shout-green">shout.run</span>/<span className="text-shout-accent">you</span>/abc123
                 </span>
               </div>
             </div>
