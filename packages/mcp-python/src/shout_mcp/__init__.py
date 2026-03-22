@@ -10,7 +10,7 @@ from mcp.server.fastmcp import FastMCP
 
 from shout_sdk import ShoutSession
 
-__version__ = "0.1.3"
+__version__ = "0.2.0"
 
 mcp = FastMCP(
     "shout",
