@@ -70,8 +70,19 @@ export default function RootLayout({
               url: 'https://shout.run',
               description:
                 'Open-source terminal broadcasting for developers and AI agents. Stream your terminal live, share replays, and embed sessions anywhere.',
-              applicationCategory: 'DeveloperApplication',
+              applicationCategory: 'DeveloperTools',
               operatingSystem: 'Linux, macOS, Windows',
+              downloadUrl: 'https://www.npmjs.com/package/shout-run',
+              featureList: [
+                'Real-time terminal streaming',
+                'Session replay',
+                'Embeddable player',
+                'asciicast v2 export',
+                'TypeScript and Python SDKs',
+                'MCP server for AI agents',
+                'Late-joiner catch-up snapshots',
+                'Privacy controls (public/private)',
+              ],
               offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
               author: {
                 '@type': 'Person',
@@ -80,6 +91,21 @@ export default function RootLayout({
               },
               license: 'https://opensource.org/licenses/MIT',
               codeRepository: 'https://github.com/pavanmadiraju91/shout-run',
+            }),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'shout.run',
+              url: 'https://shout.run',
+              sameAs: [
+                'https://github.com/pavanmadiraju91/shout-run',
+                'https://www.npmjs.com/package/shout-run',
+              ],
             }),
           }}
         />
