@@ -1,0 +1,46 @@
+# shout.run
+
+> Open-source terminal broadcasting for developers and AI agents.
+
+## What is shout?
+
+shout lets you stream your terminal to anyone with a browser. Install the CLI (`npm i -g shout-run`), run `shout`, and share the link. Sessions are recorded automatically so viewers can replay them later, and every recording can be embedded on any web page or exported as an asciicast v2 file. SDKs and MCP servers let AI agents broadcast programmatically.
+
+## Pages
+
+- Homepage: https://shout.run
+- Documentation: https://shout.run/about
+- Privacy Policy: https://shout.run/privacy
+- Terms of Service: https://shout.run/terms
+
+## Install
+
+```
+npm install -g shout-run
+```
+
+## SDKs
+
+- TypeScript SDK: `npm install shout-run-sdk`
+- Python SDK: `pip install shout-run-sdk`
+
+## MCP Servers
+
+- TypeScript: `npx shout-run-mcp`
+- Python: `pip install shout-run-mcp`
+
+## Source Code
+
+- GitHub: https://github.com/pavanmadiraju91/shout-run
+- License: MIT
+
+## Key Facts
+
+- Free and open-source (MIT license)
+- Supports Linux, macOS, and Windows
+- Sessions can last up to 4 hours
+- Binary WebSocket protocol for low-latency streaming
+- Late joiners get a terminal state snapshot so they see the current screen immediately
+- Replay export in asciicast v2 format (compatible with asciinema-player)
+- Embeddable player with oEmbed support
+- MCP tools: shout_start_broadcast, shout_write, shout_end_broadcast, shout_broadcast_status, shout_delete_session, shout_search_sessions, shout_read_session
