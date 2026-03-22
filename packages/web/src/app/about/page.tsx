@@ -103,6 +103,39 @@ export default function AboutPage() {
           <div className="mt-2">
             <CodeBlock label="shell" code={'./deploy.sh | shout --title "Deploy log"'} />
           </div>
+
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify({
+                '@context': 'https://schema.org',
+                '@type': 'HowTo',
+                name: 'How to broadcast your terminal with shout',
+                description:
+                  'Install the shout CLI, log in with GitHub, and start broadcasting your terminal in three steps.',
+                step: [
+                  {
+                    '@type': 'HowToStep',
+                    position: 1,
+                    name: 'Install the CLI',
+                    text: 'Run: npm install -g shout-run',
+                  },
+                  {
+                    '@type': 'HowToStep',
+                    position: 2,
+                    name: 'Log in with GitHub',
+                    text: 'Run: shout login',
+                  },
+                  {
+                    '@type': 'HowToStep',
+                    position: 3,
+                    name: 'Start broadcasting',
+                    text: 'Run: shout — your terminal is now live and anyone with the link can watch.',
+                  },
+                ],
+              }),
+            }}
+          />
         </section>
 
         {/* ── Features ─────────────────────────────────── */}
