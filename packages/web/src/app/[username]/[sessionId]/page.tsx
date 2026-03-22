@@ -365,7 +365,7 @@ export default function SessionViewerPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 relative" style={{ minHeight: 0 }}>
+        <div className="flex-1 flex flex-col relative" style={{ minHeight: 0 }}>
           <Terminal
             sessionId={sessionId}
             isLive={isLive}
