@@ -27,6 +27,7 @@ export const sessions = sqliteTable('sessions', {
   upvotes: integer('upvotes').notNull().default(0),
   startedAt: text('started_at').notNull(),
   endedAt: text('ended_at'),
+  deletedAt: text('deleted_at'),
 });
 
 export const follows = sqliteTable('follows', {

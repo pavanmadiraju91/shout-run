@@ -672,7 +672,7 @@ sessionsRouter.delete('/:id', authMiddleware, async (c) => {
   }
 
   // Soft delete
-  await db.update(sessions).set({ status: 'deleted' }).where(eq(sessions.id, sessionId));
+  await db.update(sessions).set({ status: 'deleted', deletedAt: new Date().toISOString() }).where(eq(sessions.id, sessionId));
 
   return c.json<ApiResponse>({ ok: true });
 });
