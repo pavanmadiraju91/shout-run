@@ -56,6 +56,8 @@ Add to `.cursor/mcp.json`:
 | `shout_end_broadcast` | End the active broadcast |
 | `shout_broadcast_status` | Check broadcast status and viewer count |
 | `shout_delete_session` | Delete an ended session you own (permanent) |
+| `shout_search_sessions` | Search sessions by query, tags, and status |
+| `shout_read_session` | Read the plain-text transcript of a session |
 
 ## Getting an API Key
 

@@ -1,9 +1,7 @@
 import { Hono } from 'hono';
-import { eq, desc, and, gte, ne, sql } from 'drizzle-orm';
+import { eq, desc, and, gte, ne, sql, like, or, lt } from 'drizzle-orm';
 import type { Env } from '../env.js';
 import { createDb, sessions, users, generateId } from '../lib/db.js';
-import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
-import { sanitizeTitle, sanitizeDescription, sanitizeTags, validateVisibility } from '../lib/validation.js';
 import type {
   ApiResponse,
   CreateSessionRequest,
@@ -11,7 +9,14 @@ import type {
   Session,
   SessionSummary,
 } from '@shout/shared';
-import { DEFAULT_RATE_LIMITS } from '@shout/shared';
+import { DEFAULT_RATE_LIMITS, stripAnsi } from '@shout/shared';
+import { authMiddleware, optionalAuthMiddleware } from '../middleware/auth.js';
+import { sanitizeTitle, sanitizeDescription, sanitizeTags, validateVisibility } from '../lib/validation.js';
+
+/** Escape SQL LIKE wildcards so user input is matched literally. */
+function escapeLike(value: string): string {
+  return value.replace(/%/g, '\\%').replace(/_/g, '\\_');
+}
 
 const sessionsRouter = new Hono<{ Bindings: Env }>();
 
@@ -114,6 +119,29 @@ sessionsRouter.get('/live', async (c) => {
   try {
     const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
 
+    // Optional query filters
+    const q = c.req.query('q');
+    const tagsParam = c.req.query('tags');
+
+    const conditions = [eq(sessions.status, 'live'), eq(sessions.visibility, 'public')];
+
+    // Text search on title and description
+    if (q) {
+      const searchPattern = `%${escapeLike(q)}%`;
+      conditions.push(
+        or(like(sessions.title, searchPattern), like(sessions.description, searchPattern))!,
+      );
+    }
+
+    // Tag filtering (any tag match)
+    if (tagsParam) {
+      const tagList = tagsParam.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+      if (tagList.length > 0) {
+        const tagConditions = tagList.map((tag) => like(sessions.tags, `%"${escapeLike(tag)}"%`));
+        conditions.push(or(...tagConditions)!);
+      }
+    }
+
     const liveSessions = await db
       .select({
         id: sessions.id,
@@ -127,7 +155,7 @@ sessionsRouter.get('/live', async (c) => {
       })
       .from(sessions)
       .innerJoin(users, eq(sessions.userId, users.id))
-      .where(and(eq(sessions.status, 'live'), eq(sessions.visibility, 'public')))
+      .where(and(...conditions))
       .orderBy(desc(sessions.upvotes), desc(sessions.viewerCount))
       .limit(50);
 
@@ -154,6 +182,29 @@ sessionsRouter.get('/recent', async (c) => {
   try {
     const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
 
+    // Optional query filters
+    const q = c.req.query('q');
+    const tagsParam = c.req.query('tags');
+
+    const conditions = [eq(sessions.status, 'ended'), eq(sessions.visibility, 'public')];
+
+    // Text search on title and description
+    if (q) {
+      const searchPattern = `%${escapeLike(q)}%`;
+      conditions.push(
+        or(like(sessions.title, searchPattern), like(sessions.description, searchPattern))!,
+      );
+    }
+
+    // Tag filtering (any tag match)
+    if (tagsParam) {
+      const tagList = tagsParam.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+      if (tagList.length > 0) {
+        const tagConditions = tagList.map((tag) => like(sessions.tags, `%"${escapeLike(tag)}"%`));
+        conditions.push(or(...tagConditions)!);
+      }
+    }
+
     const recentSessions = await db
       .select({
         id: sessions.id,
@@ -168,7 +219,7 @@ sessionsRouter.get('/recent', async (c) => {
       })
       .from(sessions)
       .innerJoin(users, eq(sessions.userId, users.id))
-      .where(and(eq(sessions.status, 'ended'), eq(sessions.visibility, 'public')))
+      .where(and(...conditions))
       .orderBy(desc(sessions.upvotes), desc(sessions.endedAt))
       .limit(20);
 
@@ -188,6 +239,175 @@ sessionsRouter.get('/recent', async (c) => {
   } catch {
     return c.json<ApiResponse>({ ok: true, data: [] });
   }
+});
+
+// GET /api/sessions/search - Search sessions with query, tags, status, and pagination
+sessionsRouter.get('/search', async (c) => {
+  try {
+    const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+
+    // Query parameters
+    const q = c.req.query('q');
+    const tagsParam = c.req.query('tags');
+    const statusParam = c.req.query('status');
+    const limitParam = c.req.query('limit');
+    const cursor = c.req.query('cursor');
+
+    const limit = Math.min(Math.max(parseInt(limitParam || '20', 10) || 20, 1), 50);
+
+    // Base conditions: public + not deleted
+    const conditions = [eq(sessions.visibility, 'public'), ne(sessions.status, 'deleted')];
+
+    // Status filter (live or ended)
+    if (statusParam === 'live') {
+      conditions.push(eq(sessions.status, 'live'));
+    } else if (statusParam === 'ended') {
+      conditions.push(eq(sessions.status, 'ended'));
+    }
+
+    // Text search on title and description
+    if (q) {
+      const searchPattern = `%${escapeLike(q)}%`;
+      conditions.push(
+        or(like(sessions.title, searchPattern), like(sessions.description, searchPattern))!,
+      );
+    }
+
+    // Tag filtering (any tag match)
+    if (tagsParam) {
+      const tagList = tagsParam.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+      if (tagList.length > 0) {
+        const tagConditions = tagList.map((tag) => like(sessions.tags, `%"${escapeLike(tag)}"%`));
+        conditions.push(or(...tagConditions)!);
+      }
+    }
+
+    // Keyset pagination: cursor is session ID
+    if (cursor) {
+      conditions.push(lt(sessions.id, cursor));
+    }
+
+    const results = await db
+      .select({
+        id: sessions.id,
+        title: sessions.title,
+        description: sessions.description,
+        tags: sessions.tags,
+        status: sessions.status,
+        viewerCount: sessions.viewerCount,
+        upvotes: sessions.upvotes,
+        startedAt: sessions.startedAt,
+        endedAt: sessions.endedAt,
+        username: users.username,
+        avatarUrl: users.avatarUrl,
+      })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(and(...conditions))
+      .orderBy(desc(sessions.id))
+      .limit(limit);
+
+    const data = results.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description || undefined,
+      tags: s.tags ? JSON.parse(s.tags) : [],
+      status: s.status,
+      username: s.username,
+      avatarUrl: s.avatarUrl,
+      viewerCount: s.viewerCount,
+      upvotes: s.upvotes,
+      startedAt: s.startedAt,
+      endedAt: s.endedAt || undefined,
+    }));
+
+    return c.json<ApiResponse>({ ok: true, data });
+  } catch {
+    return c.json<ApiResponse>({ ok: true, data: [] });
+  }
+});
+
+// GET /api/sessions/:id/content - Get session content with plain-text transcript (API key required)
+sessionsRouter.get('/:id/content', authMiddleware, async (c) => {
+  const sessionId = c.req.param('id')!;
+  const db = createDb(c.env.TURSO_URL, c.env.TURSO_AUTH_TOKEN);
+
+  // Fetch session metadata
+  const result = await db
+    .select({
+      id: sessions.id,
+      title: sessions.title,
+      description: sessions.description,
+      tags: sessions.tags,
+      status: sessions.status,
+      startedAt: sessions.startedAt,
+      endedAt: sessions.endedAt,
+      username: users.username,
+      upvotes: sessions.upvotes,
+      visibility: sessions.visibility,
+    })
+    .from(sessions)
+    .innerJoin(users, eq(sessions.userId, users.id))
+    .where(and(eq(sessions.id, sessionId), ne(sessions.status, 'deleted')))
+    .limit(1);
+
+  if (result.length === 0) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  const session = result[0];
+
+  // Private sessions have no content access
+  if (session.visibility === 'private') {
+    return c.json<ApiResponse>({ ok: false, error: 'Session is private' }, 403);
+  }
+
+  // Fetch replay data from DO (same pattern as /replay endpoint)
+  const doId = c.env.SESSION_HUB.idFromName(sessionId);
+  const doStub = c.env.SESSION_HUB.get(doId);
+
+  const replayResponse = await doStub.fetch(
+    new Request('https://internal/replay', { method: 'GET' }),
+  );
+
+  let transcript = '';
+
+  if (replayResponse.ok) {
+    const replayData = await replayResponse.json<{ chunks: Array<{ type: string; data: string }> }>();
+    const chunks = replayData.chunks ?? [];
+
+    // Extract output text from chunks
+    const outputText = chunks
+      .filter((chunk) => chunk.type === 'output' || !chunk.type)
+      .map((chunk) => chunk.data)
+      .join('');
+
+    // Strip ANSI codes for plain text
+    transcript = stripAnsi(outputText);
+
+    // Cap transcript at 1 MB to avoid worker memory/timeout issues
+    const MAX_TRANSCRIPT_CHARS = 1_000_000;
+    if (transcript.length > MAX_TRANSCRIPT_CHARS) {
+      transcript = transcript.slice(0, MAX_TRANSCRIPT_CHARS);
+    }
+  }
+
+  const responseData = {
+    session: {
+      id: session.id,
+      title: session.title,
+      description: session.description || undefined,
+      tags: session.tags ? JSON.parse(session.tags) : [],
+      username: session.username,
+      status: session.status,
+      startedAt: session.startedAt,
+      endedAt: session.endedAt || undefined,
+      upvotes: session.upvotes,
+    },
+    transcript,
+  };
+
+  return c.json<ApiResponse>({ ok: true, data: responseData });
 });
 
 // POST /api/sessions/:id/upvote - Upvote a session (anonymous, deduped by voterId)

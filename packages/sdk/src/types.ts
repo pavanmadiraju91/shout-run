@@ -29,3 +29,42 @@ export interface ShoutSessionEvents {
   error: (error: Error) => void;
   stateChange: (state: ShoutSessionState) => void;
 }
+
+// ── Search API Types ─────────────────────────────────────────
+
+export interface SessionSearchResult {
+  id: string;
+  title: string;
+  description?: string;
+  tags: string[];
+  username: string;
+  status: string;
+  startedAt: string;
+  endedAt?: string;
+  upvotes: number;
+  viewerCount: number;
+  avatarUrl?: string;
+}
+
+export interface SessionContent {
+  session: SessionSearchResult;
+  transcript: string;
+}
+
+export interface SearchSessionsOptions {
+  /** Filter by tags (any match) */
+  tags?: string[];
+  /** Filter by session status */
+  status?: 'live' | 'ended';
+  /** Maximum results (1-50, default: 20) */
+  limit?: number;
+  /** Cursor for pagination (session ID) */
+  cursor?: string;
+  /** API base URL (default: https://api.shout.run) */
+  apiUrl?: string;
+}
+
+export interface GetSessionContentOptions {
+  /** API base URL (default: https://api.shout.run) */
+  apiUrl?: string;
+}

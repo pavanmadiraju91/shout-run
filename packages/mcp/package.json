@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "@shout/shared": "workspace:*",
+    "@shout/sdk": "workspace:*",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.12",
     "tsup": "^8.5.1",

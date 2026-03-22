@@ -81,6 +81,28 @@ You can list your keys with `shout api-key list` and revoke one with `shout api-
 ShoutSession.delete_session(api_key='shout_sk_...', session_id='abc123')
 ```
 
+- **`ShoutSession.search_sessions(api_key, query, *, tags=None, status=None, limit=20, cursor=None, api_url='https://api.shout.run')`** — Search sessions by query, tags, and status.
+
+```python
+results = ShoutSession.search_sessions(
+    api_key='shout_sk_...',
+    query='typescript',
+    tags=['tutorial'],
+    status='ended',
+    limit=10,
+)
+for session in results:
+    print(f"{session['title']} by {session['username']}")
+```
+
+- **`ShoutSession.get_session_content(api_key, session_id, *, api_url='https://api.shout.run')`** — Get session metadata and plain-text transcript.
+
+```python
+content = ShoutSession.get_session_content(api_key='shout_sk_...', session_id='abc123')
+print(f"Title: {content['session']['title']}")
+print(f"Transcript: {content['transcript'][:200]}...")
+```
+
 ### Properties
 
 - **`state`** — Current state: `SessionState.IDLE`, `.CONNECTING`, `.LIVE`, `.ENDING`, `.ENDED`

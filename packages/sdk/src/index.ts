@@ -4,5 +4,9 @@ export type {
   ShoutSessionInfo,
   ShoutSessionState,
   ShoutSessionEvents,
+  SessionSearchResult,
+  SessionContent,
+  SearchSessionsOptions,
+  GetSessionContentOptions,
 } from './types.js';
 export { FrameType, WS_CLOSE } from '@shout/shared';

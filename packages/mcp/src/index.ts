@@ -16,6 +16,7 @@ import {
   type CreateSessionResponse,
   type ApiResponse,
 } from '@shout/shared';
+import { ShoutSession, type SessionSearchResult, type SessionContent } from '@shout/sdk';
 
 // ── Configuration ──────────────────────────────────────────
 
@@ -382,6 +383,110 @@ server.tool(
       const message = error instanceof Error ? error.message : 'Unknown error';
       return {
         content: [{ type: 'text', text: `Failed to delete session: ${message}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.tool(
+  'shout_search_sessions',
+  'Search for terminal broadcast sessions by query, tags, and status. Returns session metadata without content.',
+  {
+    query: z.string().describe('Search query (matches title and description)'),
+    tags: z.string().optional().describe('Comma-separated list of tags to filter by (any match)'),
+    status: z.enum(['live', 'ended']).optional().describe('Filter by session status'),
+    limit: z.number().optional().default(10).describe('Maximum number of results (1-50)'),
+  },
+  async ({ query, tags, status, limit }) => {
+    if (!API_KEY) {
+      return {
+        content: [{ type: 'text', text: 'Error: SHOUT_API_KEY environment variable is not set.' }],
+        isError: true,
+      };
+    }
+
+    try {
+      const tagList = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : undefined;
+      const results = await ShoutSession.searchSessions(API_KEY, query, {
+        tags: tagList,
+        status,
+        limit,
+        apiUrl: API_URL,
+      });
+
+      if (results.length === 0) {
+        return {
+          content: [{ type: 'text', text: `No sessions found matching "${query}".` }],
+        };
+      }
+
+      const lines = results.map((s: SessionSearchResult) => {
+        const tagLabel = s.tags.length > 0 ? ` [${s.tags.join(', ')}]` : '';
+        const statusLabel = s.status === 'live' ? ' (LIVE)' : '';
+        return `- ${s.title}${tagLabel}${statusLabel}\n  ID: ${s.id} | by ${s.username} | ${s.upvotes} upvotes`;
+      });
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${results.length} session(s):\n\n${lines.join('\n\n')}`,
+          },
+        ],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        content: [{ type: 'text', text: `Search failed: ${message}` }],
+        isError: true,
+      };
+    }
+  },
+);
+
+server.tool(
+  'shout_read_session',
+  'Read the plain-text transcript of a terminal broadcast session. Useful for understanding what commands were run.',
+  {
+    session_id: z.string().describe('The session ID to read'),
+  },
+  async ({ session_id }) => {
+    if (!API_KEY) {
+      return {
+        content: [{ type: 'text', text: 'Error: SHOUT_API_KEY environment variable is not set.' }],
+        isError: true,
+      };
+    }
+
+    try {
+      const content: SessionContent = await ShoutSession.getSessionContent(API_KEY, session_id, {
+        apiUrl: API_URL,
+      });
+
+      const session = content.session;
+      const tagsStr = session.tags.length > 0 ? `Tags: ${session.tags.join(', ')}\n` : '';
+      const header = `Title: ${session.title}\nBy: ${session.username}\nStatus: ${session.status}\n${tagsStr}Upvotes: ${session.upvotes}\n`;
+
+      // Truncate transcript if too long
+      const maxLen = 8000;
+      const transcript =
+        content.transcript.length > maxLen
+          ? content.transcript.slice(0, maxLen) + '\n\n... [transcript truncated]'
+          : content.transcript;
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `${header}\n--- Transcript ---\n\n${transcript || '(empty)'}`,
+          },
+        ],
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      return {
+        content: [{ type: 'text', text: `Failed to read session: ${message}` }],
         isError: true,
       };
     }

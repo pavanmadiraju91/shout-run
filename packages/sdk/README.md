@@ -106,6 +106,52 @@ child.on('close', async () => {
 });
 ```
 
+## Search and Content API
+
+Search existing sessions and read their transcripts.
+
+### `ShoutSession.searchSessions(apiKey, query, options?)`
+
+Search for sessions by query string, tags, and status.
+
+```typescript
+const results = await ShoutSession.searchSessions(apiKey, 'typescript', {
+  tags: ['tutorial', 'demo'],
+  status: 'ended',
+  limit: 10,
+});
+
+for (const session of results) {
+  console.log(`${session.title} by ${session.username}`);
+}
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `tags` | `string[]` | Filter by tags (any match) |
+| `status` | `'live' \| 'ended'` | Filter by session status |
+| `limit` | `number` | Max results (1-50, default: 20) |
+| `cursor` | `string` | Cursor for pagination |
+| `apiUrl` | `string` | API base URL override |
+
+### `ShoutSession.getSessionContent(apiKey, sessionId, options?)`
+
+Get session metadata and plain-text transcript.
+
+```typescript
+const content = await ShoutSession.getSessionContent(apiKey, 'abc123xyz');
+console.log(`Title: ${content.session.title}`);
+console.log(`Transcript: ${content.transcript.slice(0, 200)}...`);
+```
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `apiUrl` | `string` | API base URL override |
+
 ## License
 
 MIT
