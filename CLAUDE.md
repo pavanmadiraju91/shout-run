@@ -55,11 +55,11 @@ SDK and MCP packages provide the same broadcast capability programmatically (Typ
 
 ### Binary WebSocket protocol (`packages/shared/src/protocol.ts`)
 
-Every frame: `[type: 1 byte][timestamp: 4 bytes uint32][payload: variable]`. Frame types: Output (0x01), Meta (0x02), ViewerCount (0x03), End (0x04), Ping (0x05), Pong (0x06), Error (0x07), Resize (0x08), Snapshot (0x09). All encode/decode functions are in shared.
+Every frame: `[type: 1 byte][timestamp: 4 bytes uint32][payload: variable]`. Frame types: Output (0x01), Meta (0x02), ViewerCount (0x03), End (0x04), Ping (0x05), Pong (0x06), Error (0x07), Resize (0x08), Snapshot (0x09). All encode/decode functions are in shared. `ansi.ts` exports `stripAnsi()`, used by the `/content` endpoint for plain-text transcripts.
 
 ### SessionHub Durable Object (`packages/worker/src/durable-objects/SessionHub.ts`)
 
-One instance per broadcast session. Accepts a single broadcaster WebSocket and many viewer WebSockets (tagged via `acceptWebSocket` for hibernation). Alarm-based heartbeat pings the broadcaster every 30s; 60s silence = dead connection cleanup. Late joiners receive a terminal state snapshot (frame type 0x09) via the vt-wasm parser so they see the current screen immediately.
+One instance per broadcast session. Accepts a single broadcaster WebSocket and many viewer WebSockets (tagged via `acceptWebSocket` for hibernation). Alarm-based heartbeat pings the broadcaster every 30s; 60s silence = dead connection cleanup. Late joiners receive a terminal state snapshot (frame type 0x09) via the vt-wasm parser so they see the current screen immediately. Uses SQLite-backed DO storage (`new_sqlite_classes = ["SessionHub"]` in wrangler.toml).
 
 ### Replay storage
 
@@ -68,17 +68,36 @@ One instance per broadcast session. Accepts a single broadcaster WebSocket and m
 3. **R2 (final)** — on session end, `writeManifest()` + `consolidateReplay()` creates `manifest.json` + `replay.json` in R2.
 4. **DO storage** (legacy fallback) — key `'replayChunks'` for older sessions that predate the R2 migration.
 
-Replay requests read from R2 (`replay.json` → `manifest.json` + parts fallback) → DO storage legacy fallback. Export produces asciicast v2 (`.cast`) — NDJSON with header `{ version: 2, width, height }` then `[elapsed_secs, "o", text]` events.
+Replay requests read from R2 (`replay.json` → `manifest.json` + parts fallback) → DO storage legacy fallback. Export produces asciicast v2 (`.cast`) — NDJSON with header `{ version: 2, width, height }` then `[elapsed_secs, "o", text]` events. Consolidation is skipped for very long sessions (`MAX_CONSOLIDATION_PARTS = 33`).
 
 ### Rate limiting
 
 Dual enforcement: CLI and SessionHub both cap at `100 KB/s` (`DEFAULT_RATE_LIMITS` in `shared/src/types.ts`). CLI defers flush; server silently drops frames over limit. Sessions are capped at 4 hours (`maxSessionDurationMs`). Daily session cap: 50 per user (enforced in `routes/sessions.ts`, returns HTTP 429). Vote dedup uses `RATE_LIMITS` KV namespace with key `vote:{sessionId}:{voterId}` and 30-day TTL.
 
+### Cron purge job
+
+Daily cron (`17 3 * * *` UTC) triggers `purgeDeletedSessions()` via the Worker `scheduled` handler in `index.ts`. Soft-deleted sessions older than 7 days are hard-deleted in batches of 50: cleans DO storage, R2 replay files, and Turso rows. Code in `worker/src/lib/purge.ts`.
+
 ### Worker routing (`packages/worker/src/index.ts`)
 
-Hono app. Auth routes in `routes/auth.ts` (GitHub device flow proxy), session routes in `routes/sessions.ts`, API key routes in `routes/keys.ts`, oEmbed in `routes/oembed.ts`. JWT auth via Web Crypto API. API key auth for SDK/MCP in `lib/api-keys.ts`. Database is Turso (libSQL) with Drizzle ORM, schema in `lib/db.ts` (users, sessions, follows tables).
+Hono app. Auth routes in `routes/auth.ts` (GitHub device flow proxy), session routes in `routes/sessions.ts`, API key routes in `routes/keys.ts`, oEmbed in `routes/oembed.ts`. JWT auth via Web Crypto API. API key auth for SDK/MCP in `lib/api-keys.ts`. Database is Turso (libSQL) with Drizzle ORM, schema in `lib/db.ts` (users, sessions, follows, apiKeys tables). CORS allows `localhost:3000`, `shout.run`, `www.shout.run`, and `*.vercel.app` (see `middleware/cors.ts`).
 
-Key session endpoints in `routes/sessions.ts`: `POST /api/sessions` (create, rate-limited), `GET .../live` and `.../recent` (public feeds sorted by upvotes), `POST .../:id/upvote` (anonymous — accepts `voterId`, deduped via KV), `DELETE .../:id` (soft-delete, sets `status='deleted'`), `GET .../:id/replay` (streams chunks from R2/DO fallback chain), `GET .../:id/export` (asciicast v2 `.cast` download), `GET .../:id/ws/broadcaster` and `.../ws/viewer` (WebSocket upgrades).
+Key endpoints:
+
+- `GET /health` — health check
+- `POST /api/sessions` — create (rate-limited, 50/day per user)
+- `GET /api/sessions/live` and `.../recent` — public feeds sorted by upvotes
+- `GET /api/sessions/search` — paginated search (`?q=`, `?tags=`, `?status=`, `?cursor=`, `?limit=`)
+- `GET /api/sessions/user/:username` — user's sessions
+- `GET /api/sessions/:id` — single session detail
+- `GET /api/sessions/:id/content` — plain-text transcript (API key auth, 1 MB cap)
+- `POST /api/sessions/:id/upvote` — anonymous (accepts `voterId`, deduped via KV)
+- `POST /api/sessions/:id/end` — explicit end (CLI shutdown fallback)
+- `DELETE /api/sessions/:id` — soft-delete (sets `status='deleted'`)
+- `GET /api/sessions/:id/replay` — streams chunks from R2/DO fallback chain
+- `GET /api/sessions/:id/export` — asciicast v2 `.cast` download
+- `GET /api/sessions/:id/ws/broadcaster` and `.../ws/viewer` — WebSocket upgrades
+- `POST /api/keys` — create API key, `GET /api/keys` — list keys, `DELETE /api/keys/:id` — revoke key
 
 ### CLI auth flow
 
@@ -86,9 +105,9 @@ Key session endpoints in `routes/sessions.ts`: `POST /api/sessions` (create, rat
 
 ### Web app (`packages/web/`)
 
-Next.js App Router. Routes: `/` (homepage with left-aligned hero, searchable unified feed with upvoting), `/about` (documentation hub), `/[username]` (profile + sessions), `/[username]/[sessionId]` (viewer), `/embed/[sessionId]` (iframe-embeddable viewer), `/privacy`, `/terms`. Zustand for client state.
+Next.js App Router. Routes: `/` (homepage with left-aligned hero, searchable unified feed with upvoting), `/about` (documentation hub), `/[username]` (profile + sessions), `/[username]/[sessionId]` (viewer), `/embed/[sessionId]` (iframe-embeddable viewer), `/embed/[sessionId]/script.js` (embed script), `/privacy`, `/terms`. Additional generated routes: `robots.ts` (dynamic robots.txt with rules for GPTBot, ClaudeBot, PerplexityBot), `sitemap.ts` (dynamic sitemap.xml), and `/llms.txt` (serves `public/llms.txt` for AI discovery). Zustand for client state.
 
-Terminal and PlayerBar are `next/dynamic` with `ssr: false` (xterm.js needs browser APIs). Theme system: `ThemeProvider` stores `'dark' | 'light'` in `localStorage('shout-theme')`, sets `data-theme` attribute on `<html>`. CSS variables (`--shout-bg`, `--shout-surface`, `--shout-text`, `--shout-accent`, etc.) defined in `globals.css` for both themes. Tailwind maps these via `shout-*` utility classes (e.g., `bg-shout-surface`) in `tailwind.config.ts`.
+Terminal and PlayerBar are `next/dynamic` with `ssr: false` (xterm.js needs browser APIs). Theme system: `ThemeProvider` stores `'dark' | 'light'` in `localStorage('shout-theme')`, sets `data-theme` attribute on `<html>`. CSS variables (`--shout-bg`, `--shout-surface`, `--shout-text`, `--shout-accent`, etc.) defined in `globals.css` for both themes. Project uses **Tailwind v4** with CSS-first configuration via `@theme` block in `globals.css` (no `tailwind.config.ts` — Tailwind v4 replaces the JS config).
 
 ### CLI environment stripping (`packages/cli/src/lib/env.ts`)
 
@@ -96,11 +115,11 @@ Before PTY spawn, env vars matching 26 sensitive prefixes are removed: `AWS_SECR
 
 ## Environment setup
 
-Copy `.env.example` (root) and `packages/web/.env.local.example`. Key vars: `NEXT_PUBLIC_API_URL` (API base, default `https://api.shout.dev`), `NEXT_PUBLIC_WS_URL` (WebSocket base). Worker secrets (`TURSO_URL`, `TURSO_AUTH_TOKEN`, `JWT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) are set via `wrangler secret put`. Worker bindings in `wrangler.toml`: `SESSION_HUB` (Durable Object), `SESSIONS_BUCKET` (R2), `RATE_LIMITS` (KV).
+Copy `.env.example` (root) and `packages/web/.env.local.example`. Key vars: `NEXT_PUBLIC_API_URL` (API base, default `https://api.shout.run`), `NEXT_PUBLIC_WS_URL` (WebSocket base, default `wss://api.shout.run`). Worker secrets (`TURSO_URL`, `TURSO_AUTH_TOKEN`, `JWT_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`) are set via `wrangler secret put`. Worker bindings in `wrangler.toml`: `SESSION_HUB` (Durable Object), `SESSIONS_BUCKET` (R2), `RATE_LIMITS` (KV).
 
 ## Deployment
 
-CI (`.github/workflows/ci.yml`): lint + typecheck + build on PRs and pushes to main. Worker auto-deploys on push to main when `packages/worker/**`, `packages/shared/**`, or `packages/vt-wasm/**` change (`deploy-worker.yml`, uses `cloudflare/wrangler-action@v3`). Web deploys to Vercel automatically via Git integration (no GitHub Action). Publishing to registries uses tag-triggered workflows:
+CI (`.github/workflows/ci.yml`): lint + typecheck + build on PRs and pushes to main. CodeQL security scanning (`codeql.yml`) runs on push/PR to main plus a weekly schedule. Worker auto-deploys on push to main when `packages/worker/**`, `packages/shared/**`, or `packages/vt-wasm/**` change (`deploy-worker.yml`, uses `cloudflare/wrangler-action@v3`). Web deploys to Vercel automatically via Git integration (no GitHub Action). Publishing to registries uses tag-triggered workflows:
 
 | Package | Tag | Registry | Workflow |
 |---------|-----|----------|----------|
@@ -116,7 +135,7 @@ CI (`.github/workflows/ci.yml`): lint + typecheck + build on PRs and pushes to m
 - **ESM throughout** — all packages use `"type": "module"`, imports need `.js` extensions in TypeScript
 - **tsup** bundles CLI, SDK, and MCP — they inline `@shout/shared` via `noExternal`
 - **Worker build** uses `wrangler deploy --dry-run --outdir=dist` (not tsc)
-- **Web** uses `next.config.js` with `transpilePackages: ['@shout/shared']`
+- **Web** uses `next.config.js` with `transpilePackages: ['@shout/shared']`; **Tailwind v4** configured via `@theme` in `globals.css` (no JS config file)
 - **Python packages** use hatchling for builds, Python >= 3.10
 - **Worker secrets** are set via `wrangler secret put`, not in wrangler.toml
 - **Prettier**: semicolons, single quotes, trailing commas, 100 char width
