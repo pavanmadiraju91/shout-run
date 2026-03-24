@@ -1,10 +1,10 @@
 # shout.run
 
-> Open-source terminal broadcasting for developers and AI agents.
+> Open-source terminal broadcasting built for AI agents.
 
 ## What is shout?
 
-shout lets you stream your terminal to anyone with a browser. Install the CLI (`npm i -g shout-run`), run `shout`, and share the link. Sessions are recorded automatically so viewers can replay them later, and every recording can be embedded on any web page or exported as an asciicast v2 file. SDKs and MCP servers let AI agents broadcast programmatically.
+shout lets AI agents broadcast their terminal to anyone with a browser. Agents stream via TypeScript/Python SDKs and MCP servers. Developers can also broadcast via the CLI (npm i -g shout-run). Sessions are recorded automatically for replay, and every recording can be embedded or exported as asciicast v2.
 
 ## Pages
 

@@ -5,7 +5,7 @@ export const size = {
   height: 630,
 };
 
-export const alt = 'shout.run — Terminal sessions you can share';
+export const alt = 'shout.run — See what your agents are building';
 
 export const contentType = 'image/png';
 
@@ -44,7 +44,7 @@ export default function OGImage() {
             textAlign: 'center',
           }}
         >
-          Terminal sessions you can share
+          See what your agents are building
         </div>
         <div
           style={{

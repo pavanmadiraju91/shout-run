@@ -8,26 +8,26 @@ import { CopyButton } from '@/components/CopyButton';
 
 const PLACEHOLDER_SESSIONS = [
   {
-    title: 'Building a Rust CLI from scratch',
-    username: 'rustacean',
-    time: '12m ago',
+    title: 'Refactoring auth middleware',
+    username: 'claude-agent',
+    time: '3m ago',
     live: true,
   },
   {
-    title: 'Debugging a production memory leak',
-    username: 'sre_wizard',
-    time: '25m ago',
+    title: 'Running database migrations',
+    username: 'deploy-bot',
+    time: '18m ago',
     live: true,
   },
   {
-    title: 'Live-coding a VS Code extension',
-    username: 'vscode_dev',
+    title: 'Building a REST API from spec',
+    username: 'codex_dev',
     time: '1h ago',
     live: false,
   },
   {
-    title: 'Setting up Kubernetes the hard way',
-    username: 'k8s_nerd',
+    title: 'Setting up CI/CD pipeline',
+    username: 'infra_agent',
     time: '2h ago',
     live: false,
   },
@@ -74,7 +74,7 @@ function PlaceholderFeed() {
       </div>
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-shout-bg/50 via-shout-bg/85 to-shout-bg/95">
         <p className="text-shout-text font-medium text-sm mb-1">No sessions yet</p>
-        <p className="text-shout-muted text-xs">Be the first to stream your terminal</p>
+        <p className="text-shout-muted text-xs">Be the first to broadcast a session</p>
       </div>
     </div>
   );
@@ -189,65 +189,100 @@ export default function HomePage() {
         {/* ── Hero ──────────────────────────────────────── */}
         <section ref={heroRef} className="py-12 sm:py-20">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-3 max-w-2xl">
-            Terminal sessions you can <span className="text-shout-green">share.</span>
+            See what your agents are <span className="text-shout-green">building.</span>
           </h1>
           <p className="text-shout-muted text-lg sm:text-xl max-w-xl">
-            Live streaming, replay, embed.
+            Live terminal streaming for AI agents, developers, and teams.
           </p>
           {/* SEO definition paragraph — visible to crawlers and screen readers, hidden from visual layout */}
           <p className="sr-only">
-            shout is an open-source terminal broadcasting tool. Install the CLI, run shout,
-            and anyone with the link can watch your terminal in real time — no screen-sharing
-            software required. Sessions are recorded automatically so viewers can replay them
-            later, and every recording can be embedded on any web page or exported as an
-            asciicast v2 file. Built for developers, DevRel, and AI agents via SDKs and MCP
+            shout is open-source terminal broadcasting built for AI agents. Let your agents
+            stream their terminal in real time — watch them work, replay sessions later, or
+            embed recordings anywhere. Available as a CLI, TypeScript and Python SDKs, and MCP
             servers.
           </p>
         </section>
 
         {/* ── How it works ──────────────────────────────── */}
         <section className="pb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 border-b border-shout-border pb-6">
-            {/* Step 1 */}
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                1
-              </span>
-              <span className="text-sm font-medium text-shout-text flex-shrink-0">Install</span>
-              <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                <span className="text-shout-green">$</span>
-                <span className="text-shout-text truncate">npm i -g shout-run</span>
-                <CopyButton text="npm i -g shout-run" size="small" />
+          <div className="grid md:grid-cols-2 gap-6 border-b border-shout-border pb-6">
+            {/* Agent path */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-shout-muted mb-3">
+                For agents
+              </p>
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
+                    1
+                  </span>
+                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Connect</span>
+                  <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
+                    <span className="text-shout-green">$</span>
+                    <span className="text-shout-text truncate">pip install shout-run-sdk</span>
+                    <CopyButton text="pip install shout-run-sdk" size="small" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
+                    2
+                  </span>
+                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Stream</span>
+                  <span className="text-xs text-shout-muted">Agent broadcasts as it works</span>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
+                    3
+                  </span>
+                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Watch</span>
+                  <div className="flex items-center bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
+                    <span className="text-shout-text truncate">
+                      <span className="text-shout-green">shout.run</span>/<span className="text-shout-accent">agent</span>/session
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <span className="hidden sm:block text-shout-muted/40 text-xs">&rsaquo;</span>
-
-            {/* Step 2 */}
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                2
-              </span>
-              <span className="text-sm font-medium text-shout-text flex-shrink-0">Broadcast</span>
-              <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                <span className="text-shout-green">$</span>
-                <span className="text-shout-text">shout</span>
-                <CopyButton text="shout" size="small" />
-              </div>
-            </div>
-
-            <span className="hidden sm:block text-shout-muted/40 text-xs">&rsaquo;</span>
-
-            {/* Step 3 */}
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                3
-              </span>
-              <span className="text-sm font-medium text-shout-text flex-shrink-0">Share</span>
-              <div className="flex items-center bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                <span className="text-shout-text truncate">
-                  <span className="text-shout-green">shout.run</span>/<span className="text-shout-accent">you</span>/abc123
-                </span>
+            {/* Developer path */}
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-shout-muted mb-3">
+                For developers
+              </p>
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
+                    1
+                  </span>
+                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Install</span>
+                  <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
+                    <span className="text-shout-green">$</span>
+                    <span className="text-shout-text truncate">npm i -g shout-run</span>
+                    <CopyButton text="npm i -g shout-run" size="small" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
+                    2
+                  </span>
+                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Broadcast</span>
+                  <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
+                    <span className="text-shout-green">$</span>
+                    <span className="text-shout-text">shout</span>
+                    <CopyButton text="shout" size="small" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
+                    3
+                  </span>
+                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Share</span>
+                  <div className="flex items-center bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
+                    <span className="text-shout-text truncate">
+                      <span className="text-shout-green">shout.run</span>/<span className="text-shout-accent">you</span>/session
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
