@@ -56,8 +56,8 @@ export default function AboutPage() {
             About <span className="text-shout-green">shout</span>
           </h1>
           <p className="text-shout-muted leading-relaxed">
-            Broadcast your terminal to anyone with a browser. Install the CLI, run{' '}
-            <Code>shout</Code>, share the link.
+            Terminal broadcasting built for AI agents. Watch them work live, replay sessions,
+            embed anywhere.
           </p>
         </section>
 
@@ -417,7 +417,7 @@ session.end()`}
               [
                 [
                   'What is shout?',
-                  'shout is an open-source terminal broadcasting tool. It lets developers stream their terminal output in real time to anyone with a browser, record sessions for replay, and embed recordings on any web page.',
+                  'shout is open-source terminal broadcasting built for AI agents. Stream an agent\u2019s terminal in real time, replay sessions, and embed recordings on any page. Also works as a CLI for developers who want to broadcast their own terminal.',
                 ],
                 [
                   'How does shout work?',
@@ -468,7 +468,7 @@ session.end()`}
                     name: 'What is shout?',
                     acceptedAnswer: {
                       '@type': 'Answer',
-                      text: 'shout is an open-source terminal broadcasting tool. It lets developers stream their terminal output in real time to anyone with a browser, record sessions for replay, and embed recordings on any web page.',
+                      text: 'shout is open-source terminal broadcasting built for AI agents. Stream an agent\u2019s terminal in real time, replay sessions, and embed recordings on any page. Also works as a CLI for developers who want to broadcast their own terminal.',
                     },
                   },
                   {

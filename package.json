@@ -2,7 +2,7 @@
   "name": "shout",
   "version": "0.1.0",
   "private": true,
-  "description": "Live terminal broadcasting for developers",
+  "description": "Terminal broadcasting for AI agents and developers",
   "homepage": "https://shout.run",
   "author": "pavanmadiraju91",
   "keywords": [

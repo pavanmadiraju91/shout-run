@@ -7,10 +7,13 @@ import './globals.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://shout.run'),
-  title: 'shout.run — Terminal sessions you can share',
+  title: 'shout.run — See what your agents are building',
   description:
-    'Stream your terminal live, share replays, and embed sessions. Open-source terminal broadcasting for developers and AI agents.',
+    'Watch your AI agents work in real time. Open-source terminal broadcasting with live streaming, replay, and embeds — for agents, developers, and teams.',
   keywords: [
+    'AI agents',
+    'agentic terminal',
+    'MCP terminal',
     'terminal sharing',
     'live terminal',
     'terminal streaming',
@@ -25,16 +28,18 @@ export const metadata: Metadata = {
     canonical: '/',
   },
   openGraph: {
-    title: 'shout.run — Terminal sessions you can share',
-    description: 'Stream your terminal live, share replays, and embed sessions.',
+    title: 'shout.run — See what your agents are building',
+    description:
+      'Watch your AI agents work in real time. Live streaming, replay, and embeddable terminal sessions.',
     url: 'https://shout.run',
     siteName: 'shout.run',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'shout.run — Terminal sessions you can share',
-    description: 'Stream your terminal live, share replays, and embed sessions.',
+    title: 'shout.run — See what your agents are building',
+    description:
+      'Watch your AI agents work in real time. Live streaming, replay, and embeddable terminal sessions.',
     images: ['/opengraph-image'],
   },
 };
@@ -69,7 +74,7 @@ export default function RootLayout({
               name: 'shout',
               url: 'https://shout.run',
               description:
-                'Open-source terminal broadcasting for developers and AI agents. Stream your terminal live, share replays, and embed sessions anywhere.',
+                'Open-source terminal broadcasting built for AI agents. Stream, replay, and embed terminal sessions — from CLI, SDKs, or MCP servers.',
               applicationCategory: 'DeveloperTools',
               operatingSystem: 'Linux, macOS, Windows',
               downloadUrl: 'https://www.npmjs.com/package/shout-run',

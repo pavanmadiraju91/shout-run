@@ -1,6 +1,6 @@
 # shout
 
-Live terminal broadcasting. Stream your terminal to the web, share replays, embed sessions.
+Terminal broadcasting for AI agents. Watch your agents work live, replay sessions, embed anywhere.
 
 [![npm](https://img.shields.io/npm/v/shout-run)](https://www.npmjs.com/package/shout-run)
 [![SDK](https://img.shields.io/npm/v/shout-run-sdk?label=sdk)](https://www.npmjs.com/package/shout-run-sdk)
@@ -10,9 +10,9 @@ Live terminal broadcasting. Stream your terminal to the web, share replays, embe
 
 ## What is this
 
-**shout** broadcasts your terminal session over the web in real time. Viewers watch in a browser — no installs, no screen sharing, no latency from video encoding. When the session ends, the recording is available for replay and export.
+**shout** broadcasts terminal sessions to the web in real time — built for AI agents and developers. Agents stream via SDKs and MCP servers; developers stream via the CLI. Viewers watch in a browser with no installs. Sessions are recorded for replay and export.
 
-Think of it like Twitch for your terminal. [tmate](https://tmate.io/) is for private pair programming, [asciinema](https://asciinema.org/) is for recorded demos — shout is for live public broadcasting with an audience.
+Think of it like a window into what your AI agent is doing. [tmate](https://tmate.io/) is for private pair programming, [asciinema](https://asciinema.org/) is for recorded demos — shout is for watching agents work and broadcasting live sessions.
 
 Website: [shout.run](https://shout.run)
 
