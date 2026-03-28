@@ -187,7 +187,7 @@ export default function HomePage() {
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6">
         {/* ── Hero ──────────────────────────────────────── */}
-        <section ref={heroRef} className="py-12 sm:py-20">
+        <section ref={heroRef} className="pt-12 sm:pt-20 pb-8 sm:pb-10">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-3 max-w-2xl">
             See what your agents are <span className="text-shout-green">building.</span>
           </h1>
@@ -203,22 +203,27 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ── Install card ─────────────────────────────── */}
-        <section className="pb-8">
-          <div className="rounded-xl bg-shout-surface border border-shout-border p-5 sm:p-6 max-w-lg">
-            <div className="mb-4">
-              <p className="text-sm font-semibold text-shout-text">Install</p>
-              <p className="text-xs text-shout-muted mt-0.5">One command, interactive setup</p>
+        {/* ── Install terminal ─────────────────────────── */}
+        <section className="pb-10">
+          <div className="rounded-lg overflow-hidden border border-shout-border max-w-2xl shadow-lg shadow-black/10">
+            {/* Terminal title bar */}
+            <div className="flex items-center gap-2 px-4 py-2.5 bg-shout-surface border-b border-shout-border">
+              <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+              <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
+              <span className="w-3 h-3 rounded-full bg-[#28c840]" />
+              <span className="ml-2 text-xs text-shout-muted font-mono">Terminal</span>
             </div>
-            <div className="space-y-2.5">
-              <div className="flex items-center gap-2 bg-shout-bg border border-shout-border rounded-lg px-3 py-2.5 font-mono text-xs sm:text-sm">
-                <CopyButton text="curl -fsSL https://shout.run/install.sh | bash" size="small" />
+            {/* Terminal body */}
+            <div className="bg-shout-bg px-4 py-4 font-mono text-sm space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="text-shout-green select-none shrink-0">$</span>
                 <code className="text-shout-text truncate">curl -fsSL https://shout.run/install.sh | bash</code>
+                <CopyButton text="curl -fsSL https://shout.run/install.sh | bash" size="small" />
               </div>
-              <div className="flex items-center gap-2 bg-shout-bg border border-shout-border rounded-lg px-3 py-2.5 font-mono text-xs sm:text-sm">
-                <span className="text-shout-muted text-xs">Then</span>
-                <code className="text-shout-green font-semibold">shout</code>
-                <span className="text-shout-muted text-xs ml-auto hidden sm:inline">start broadcasting</span>
+              <div className="flex items-center gap-2">
+                <span className="text-shout-green select-none shrink-0">$</span>
+                <code className="text-shout-text">shout</code>
+                <span className="text-shout-muted text-xs ml-1 hidden sm:inline">← start broadcasting</span>
               </div>
             </div>
           </div>
