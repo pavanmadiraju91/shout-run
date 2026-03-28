@@ -6,6 +6,7 @@
 @theme {
   --color-shout-bg: var(--shout-bg);
   --color-shout-surface: var(--shout-surface);
+  --color-shout-surface-dim: var(--shout-surface-dim);
   --color-shout-surface-hover: var(--shout-surface-hover);
   --color-shout-border: var(--shout-border);
   --color-shout-text: var(--shout-text);
@@ -36,6 +37,7 @@
   --shout-green: #3fb950;
   --shout-red: #f85149;
   --shout-yellow: #d29922;
+  --shout-surface-dim: #12161d;
   --shout-terminal-bg: #0d1117;
   --shout-terminal-fg: #e6edf3;
   --shout-terminal-cursor: #58a6ff;
@@ -53,6 +55,7 @@
   --shout-green: #1a7f37;
   --shout-red: #cf222e;
   --shout-yellow: #9a6700;
+  --shout-surface-dim: #f3f2ef;
   --shout-terminal-bg: #faf9f7;
   --shout-terminal-fg: #1a1a1a;
   --shout-terminal-cursor: #0969da;
