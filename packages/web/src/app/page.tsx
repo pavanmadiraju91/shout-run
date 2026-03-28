@@ -39,11 +39,12 @@ function CopyableLine({ text }: { text: string }) {
         tabIndex={0}
         onClick={handleCopy}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCopy(); }}
-        className="flex items-center gap-2 cursor-pointer group rounded -mx-2 px-2 py-1 hover:bg-shout-surface/50 transition-colors"
+        className="flex items-center gap-2 cursor-pointer group rounded -mx-2 px-2 py-1 hover:bg-shout-surface/50 active:bg-shout-surface/70 transition-colors outline-none focus-visible:ring-1 focus-visible:ring-shout-muted/50"
         title="Click to copy"
       >
         <span className="text-shout-green select-none shrink-0">$</span>
         <code className="text-shout-text truncate">{text}</code>
+        <span className="inline-block w-[7px] h-[15px] bg-shout-text/70 animate-[blink_1s_step-end_infinite] shrink-0" />
         <span className="ml-auto shrink-0 text-shout-muted opacity-0 group-hover:opacity-100 transition-opacity">
           {copied ? (
             <svg className="w-3.5 h-3.5 text-shout-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -260,13 +261,13 @@ export default function HomePage() {
 
         {/* ── Install terminal ─────────────────────────── */}
         <section className="pb-10">
-          <div className="rounded-lg overflow-hidden border border-shout-border shadow-lg shadow-black/10">
+          <div className="rounded-lg overflow-hidden border border-shout-border">
             {/* Terminal title bar */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-shout-surface border-b border-shout-border">
               <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
               <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
               <span className="w-3 h-3 rounded-full bg-[#28c840]" />
-              <span className="ml-2 text-xs text-shout-muted font-mono">Terminal</span>
+              <span className="ml-2 text-xs text-shout-muted font-mono">your favorite terminal</span>
             </div>
             {/* Terminal body */}
             <div className="bg-shout-bg px-4 py-4 font-mono text-sm space-y-3">
@@ -274,7 +275,6 @@ export default function HomePage() {
               <div className="flex items-center gap-2">
                 <span className="text-shout-green select-none shrink-0">$</span>
                 <code className="text-shout-text">shout</code>
-                <span className="text-shout-muted text-xs ml-1 hidden sm:inline">← start broadcasting</span>
               </div>
             </div>
           </div>
