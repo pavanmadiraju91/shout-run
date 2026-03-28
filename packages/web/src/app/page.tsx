@@ -285,7 +285,7 @@ export default function HomePage() {
         </section>
 
         {/* ── Install terminal ─────────────────────────── */}
-        <section className="pb-10">
+        <section className="pb-16 sm:pb-20">
           <div className="rounded-lg overflow-hidden border border-shout-border">
             {/* Terminal title bar */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-shout-surface-dim border-b border-shout-border">
@@ -325,7 +325,7 @@ export default function HomePage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search sessions..."
-                className="w-full pl-9 pr-3 py-2 text-sm bg-shout-bg border border-shout-border rounded-lg text-shout-text placeholder:text-shout-muted/60 focus:outline-none focus:ring-2 focus:ring-shout-accent/50 focus:border-shout-accent/50 transition-colors"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-shout-bg border border-shout-border rounded-lg text-shout-text placeholder:text-shout-muted/60 focus:outline-none focus:ring-2 focus:ring-shout-green/50 focus:border-shout-green/50 transition-colors"
               />
               {feedItems.length > 0 && !searchQuery && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] text-shout-muted tabular-nums">
