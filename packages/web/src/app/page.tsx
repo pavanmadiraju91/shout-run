@@ -92,33 +92,47 @@ const PLACEHOLDER_SESSIONS = [
 function PlaceholderFeed() {
   return (
     <div className="relative">
-      <div className="divide-y divide-shout-border/30">
+      <div className="space-y-3">
         {PLACEHOLDER_SESSIONS.map((s, i) => (
-          <div key={i} className="flex items-start gap-3 py-3 px-3 opacity-[0.3]">
-            <div className="w-8 h-8 rounded-full bg-shout-surface border border-shout-border flex items-center justify-center text-xs font-medium text-shout-muted flex-shrink-0 mt-0.5">
-              {s.username.charAt(0).toUpperCase()}
+          <div
+            key={i}
+            className="flex flex-col sm:flex-row items-stretch gap-4 bg-shout-surface rounded-xl p-4 sm:p-5 border border-shout-border/60 opacity-[0.3]"
+          >
+            {/* Faux terminal thumbnail */}
+            <div className="relative flex-shrink-0 w-full sm:w-60 h-32 sm:h-36 rounded-lg overflow-hidden bg-[#0d1117] select-none">
+              <div className="absolute inset-0 p-3 font-mono text-[11px] leading-relaxed">
+                <p className="text-shout-green truncate">
+                  <span className="text-shout-muted/60">$</span> {s.title}
+                </p>
+                <p className="text-shout-muted/70 mt-1 truncate">
+                  @{s.username} &middot; {s.time}
+                </p>
+              </div>
+              <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#0d1117] to-transparent" />
+              {s.live && (
+                <div className="absolute bottom-2.5 left-3 flex items-center gap-1.5">
+                  <span className="h-2 w-2 rounded-full bg-shout-green" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-shout-green">
+                    Streaming
+                  </span>
+                </div>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs text-shout-muted">
-                  <span className="font-medium text-shout-text">{s.username}</span>
-                  <span className="mx-1">&middot;</span>
+            {/* Content */}
+            <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-shout-text truncate">
+                  {s.title}
+                </h3>
+                <p className="text-sm text-shout-muted mt-1 truncate">
+                  @{s.username}
+                  <span className="mx-1.5">&middot;</span>
                   {s.time}
                 </p>
-                {s.live && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider bg-shout-green/15 text-shout-green px-1.5 py-px rounded">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="animate-pulse-live absolute inline-flex h-full w-full rounded-full bg-shout-green opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-shout-green"></span>
-                    </span>
-                    live
-                  </span>
-                )}
               </div>
-              <p className="text-sm font-medium text-shout-text mt-0.5">{s.title}</p>
-              <div className="flex items-center gap-4 mt-1.5 text-xs text-shout-muted">
+              <div className="flex items-center gap-4 mt-3 text-xs text-shout-muted">
                 <span className="inline-flex items-center gap-1">
-                  <svg viewBox="0 0 16 16" className="w-3 h-3" fill="currentColor">
+                  <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="currentColor">
                     <path d="M8 2l6 8H2l6-8z" />
                   </svg>
                   0
@@ -128,7 +142,7 @@ function PlaceholderFeed() {
           </div>
         ))}
       </div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-shout-bg/50 via-shout-bg/85 to-shout-bg/95">
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-shout-bg/50 via-shout-bg/85 to-shout-bg/95 rounded-xl">
         <p className="text-shout-text font-medium text-sm mb-1">No sessions yet</p>
         <p className="text-shout-muted text-xs">Be the first to broadcast a session</p>
       </div>
@@ -138,17 +152,28 @@ function PlaceholderFeed() {
 
 function FeedSkeleton() {
   return (
-    <div className="divide-y divide-shout-border/30">
+    <div className="space-y-3">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-start gap-3 py-3 px-3 animate-pulse">
-          <div className="w-8 h-8 rounded-full bg-shout-surface flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0 space-y-2">
-            <div className="flex items-center gap-2">
-              <div className="h-3 w-20 bg-shout-surface rounded" />
-              <div className="h-3 w-12 bg-shout-surface rounded" />
+        <div
+          key={i}
+          className="flex flex-col sm:flex-row items-stretch gap-4 bg-shout-surface rounded-xl p-4 sm:p-5 border border-shout-border/60 animate-pulse"
+        >
+          {/* Thumbnail skeleton */}
+          <div className="flex-shrink-0 w-full sm:w-60 h-32 sm:h-36 rounded-lg bg-shout-border/20" />
+          {/* Content skeleton */}
+          <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+            <div className="space-y-2">
+              <div className="h-5 w-3/4 bg-shout-border/20 rounded" />
+              <div className="h-4 w-1/2 bg-shout-border/20 rounded" />
             </div>
-            <div className="h-4 w-3/4 bg-shout-surface rounded" />
-            <div className="h-3 w-16 bg-shout-surface rounded" />
+            <div className="flex items-center gap-4 mt-3">
+              <div className="h-3.5 w-10 bg-shout-border/20 rounded" />
+              <div className="h-3.5 w-16 bg-shout-border/20 rounded" />
+            </div>
+          </div>
+          {/* Button skeleton */}
+          <div className="flex-shrink-0 flex items-start pt-1">
+            <div className="h-9 w-28 bg-shout-border/20 rounded-lg" />
           </div>
         </div>
       ))}
@@ -329,7 +354,7 @@ export default function HomePage() {
             ) : feedItems.length === 0 ? (
               <PlaceholderFeed />
             ) : filteredItems.length > 0 ? (
-              <div className="divide-y divide-shout-border/40">
+              <div className="space-y-3">
                 {filteredItems.map((item, i) => (
                   <FeedItem key={item.id} item={item} index={i} />
                 ))}
