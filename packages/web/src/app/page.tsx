@@ -6,37 +6,58 @@ import { FeedItem } from '@/components/FeedItem';
 import { Footer } from '@/components/Footer';
 import { CopyButton } from '@/components/CopyButton';
 
+function CopyToast({ show }: { show: boolean }) {
+  return (
+    <div
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 bg-shout-surface border border-shout-border rounded-lg px-4 py-3 shadow-xl shadow-black/20 transition-all duration-300 ${
+        show ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0 pointer-events-none'
+      }`}
+    >
+      <svg className="w-5 h-5 text-shout-green shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span className="text-sm font-medium text-shout-text">Install command copied!</span>
+    </div>
+  );
+}
+
 function CopyableLine({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
+  const [showToast, setShowToast] = useState(false);
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(text);
     setCopied(true);
+    setShowToast(true);
     setTimeout(() => setCopied(false), 2000);
+    setTimeout(() => setShowToast(false), 2500);
   }, [text]);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={handleCopy}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCopy(); }}
-      className="flex items-center gap-2 cursor-pointer group rounded -mx-2 px-2 py-1 hover:bg-shout-surface/50 transition-colors"
-      title="Click to copy"
-    >
-      <span className="text-shout-green select-none shrink-0">$</span>
-      <code className="text-shout-text truncate">{text}</code>
-      <span className="ml-auto shrink-0 text-shout-muted opacity-0 group-hover:opacity-100 transition-opacity">
-        {copied ? (
-          <svg className="w-3.5 h-3.5 text-shout-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
-        ) : (
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-          </svg>
-        )}
-      </span>
-    </div>
+    <>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleCopy}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleCopy(); }}
+        className="flex items-center gap-2 cursor-pointer group rounded -mx-2 px-2 py-1 hover:bg-shout-surface/50 transition-colors"
+        title="Click to copy"
+      >
+        <span className="text-shout-green select-none shrink-0">$</span>
+        <code className="text-shout-text truncate">{text}</code>
+        <span className="ml-auto shrink-0 text-shout-muted opacity-0 group-hover:opacity-100 transition-opacity">
+          {copied ? (
+            <svg className="w-3.5 h-3.5 text-shout-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          )}
+        </span>
+      </div>
+      <CopyToast show={showToast} />
+    </>
   );
 }
 
