@@ -1,0 +1,12 @@
+{
+  "name": "shout-demo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node agent-build.mjs"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.0"
+  }
+}

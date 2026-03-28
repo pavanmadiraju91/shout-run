@@ -24,5 +24,11 @@ packages/worker/src/lib/vt-wasm/
 .claude/projects/
 .claude/scheduled_tasks.lock
 
+# Internal tracking
+docs/internal/
+
 # Playwright MCP
 .playwright-mcp/
+
+# Demo (standalone, not part of workspace)
+demo/node_modules/
