@@ -292,14 +292,14 @@ export default function HomePage() {
               <span className="w-3 h-3 rounded-full bg-[#ff5f57] opacity-50" />
               <span className="w-3 h-3 rounded-full bg-[#febc2e] opacity-50" />
               <span className="w-3 h-3 rounded-full bg-[#28c840] opacity-50" />
-              <span className="ml-2 text-xs text-shout-muted font-mono">your favorite terminal</span>
+              <span className="ml-2 text-xs text-shout-muted font-mono">quick start</span>
             </div>
             {/* Terminal body */}
             <div className="bg-shout-bg px-4 py-4 font-mono text-sm space-y-3">
               <CopyableLine text="curl -fsSL https://shout.run/install.sh | bash" />
               <div className="flex items-center gap-2">
                 <span className="text-shout-green select-none shrink-0">$</span>
-                <code className="text-shout-text">shout</code>
+                <code className="text-shout-text">shout -t &quot;my first shout&quot;</code>
               </div>
             </div>
           </div>
