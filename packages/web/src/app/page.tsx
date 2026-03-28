@@ -289,9 +289,9 @@ export default function HomePage() {
           <div className="rounded-lg overflow-hidden border border-shout-border">
             {/* Terminal title bar */}
             <div className="flex items-center gap-2 px-4 py-2.5 bg-shout-surface-dim border-b border-shout-border">
-              <span className="w-3 h-3 rounded-full bg-[#ff5f57]" />
-              <span className="w-3 h-3 rounded-full bg-[#febc2e]" />
-              <span className="w-3 h-3 rounded-full bg-[#28c840]" />
+              <span className="w-3 h-3 rounded-full bg-[#ff5f57] opacity-50" />
+              <span className="w-3 h-3 rounded-full bg-[#febc2e] opacity-50" />
+              <span className="w-3 h-3 rounded-full bg-[#28c840] opacity-50" />
               <span className="ml-2 text-xs text-shout-muted font-mono">your favorite terminal</span>
             </div>
             {/* Terminal body */}
