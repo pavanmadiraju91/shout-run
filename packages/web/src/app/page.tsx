@@ -147,8 +147,8 @@ export default function HomePage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 h-10 flex items-center justify-between">
           <div className="flex items-center gap-3 font-mono text-xs text-shout-muted">
             <span className="text-shout-green">$</span>
-            <span className="text-shout-text">npm i -g shout-run</span>
-            <CopyButton text="npm i -g shout-run" size="small" />
+            <span className="text-shout-text truncate">curl -fsSL https://shout.run/install.sh | bash</span>
+            <CopyButton text="curl -fsSL https://shout.run/install.sh | bash" size="small" />
           </div>
           <div className="flex items-center gap-3 text-[11px] text-shout-muted">
             <span className="hidden sm:flex items-center gap-1">
@@ -203,86 +203,22 @@ export default function HomePage() {
           </p>
         </section>
 
-        {/* ── How it works ──────────────────────────────── */}
+        {/* ── Install card ─────────────────────────────── */}
         <section className="pb-8">
-          <div className="grid md:grid-cols-2 gap-6 border-b border-shout-border pb-6">
-            {/* Agent path */}
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-shout-muted mb-3">
-                For agents
-              </p>
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                    1
-                  </span>
-                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Connect</span>
-                  <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                    <span className="text-shout-green">$</span>
-                    <span className="text-shout-text truncate">pip install shout-run-sdk</span>
-                    <CopyButton text="pip install shout-run-sdk" size="small" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                    2
-                  </span>
-                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Stream</span>
-                  <span className="text-xs text-shout-muted">Agent broadcasts as it works</span>
-                </div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                    3
-                  </span>
-                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Watch</span>
-                  <div className="flex items-center bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                    <span className="text-shout-text truncate">
-                      <span className="text-shout-green">shout.run</span>/<span className="text-shout-accent">agent</span>/session
-                    </span>
-                  </div>
-                </div>
-              </div>
+          <div className="rounded-xl bg-shout-surface border border-shout-border p-5 sm:p-6 max-w-lg">
+            <div className="mb-4">
+              <p className="text-sm font-semibold text-shout-text">Install</p>
+              <p className="text-xs text-shout-muted mt-0.5">One command, interactive setup</p>
             </div>
-
-            {/* Developer path */}
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-shout-muted mb-3">
-                For developers
-              </p>
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                    1
-                  </span>
-                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Install</span>
-                  <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                    <span className="text-shout-green">$</span>
-                    <span className="text-shout-text truncate">npm i -g shout-run</span>
-                    <CopyButton text="npm i -g shout-run" size="small" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                    2
-                  </span>
-                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Broadcast</span>
-                  <div className="flex items-center gap-1.5 bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                    <span className="text-shout-green">$</span>
-                    <span className="text-shout-text">shout</span>
-                    <CopyButton text="shout" size="small" />
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="flex items-center justify-center w-5 h-5 rounded bg-shout-green/15 text-shout-green text-xs font-bold font-mono flex-shrink-0">
-                    3
-                  </span>
-                  <span className="text-sm font-medium text-shout-text flex-shrink-0">Share</span>
-                  <div className="flex items-center bg-shout-surface border border-shout-border rounded px-2 py-1 font-mono text-xs min-w-0">
-                    <span className="text-shout-text truncate">
-                      <span className="text-shout-green">shout.run</span>/<span className="text-shout-accent">you</span>/session
-                    </span>
-                  </div>
-                </div>
+            <div className="space-y-2.5">
+              <div className="flex items-center gap-2 bg-shout-bg border border-shout-border rounded-lg px-3 py-2.5 font-mono text-xs sm:text-sm">
+                <CopyButton text="curl -fsSL https://shout.run/install.sh | bash" size="small" />
+                <code className="text-shout-text truncate">curl -fsSL https://shout.run/install.sh | bash</code>
+              </div>
+              <div className="flex items-center gap-2 bg-shout-bg border border-shout-border rounded-lg px-3 py-2.5 font-mono text-xs sm:text-sm">
+                <span className="text-shout-muted text-xs">Then</span>
+                <code className="text-shout-green font-semibold">shout</code>
+                <span className="text-shout-muted text-xs ml-auto hidden sm:inline">start broadcasting</span>
               </div>
             </div>
           </div>
