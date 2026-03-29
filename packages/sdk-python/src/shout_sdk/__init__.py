@@ -5,4 +5,4 @@ from .protocol import FrameType
 from .redact import StreamRedactor
 
 __all__ = ['ShoutSession', 'SessionState', 'FrameType', 'StreamRedactor']
-__version__ = '0.1.4'
+__version__ = '0.3.0'
