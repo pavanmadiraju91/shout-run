@@ -5,11 +5,12 @@
  */
 import { describe, it, expect } from 'vitest';
 import { StreamRedactor } from '../redact.js';
+import { collectSensitiveValues } from '../env.js';
 
 describe('StreamRedactor (functional)', () => {
   function makeRedactor() {
     const r = new StreamRedactor();
-    r.collectFromEnv({
+    const env = {
       GITHUB_TOKEN: 'ghp_abc123def456789xyz',
       OPENAI_API_KEY: 'sk-proj-abcdefghijklmnop',
       AWS_SECRET_ACCESS_KEY: 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY',
@@ -18,7 +19,10 @@ describe('StreamRedactor (functional)', () => {
       PATH: '/usr/bin',
       TERM: 'xterm-256color',
       EDITOR: 'vim',
-    });
+    };
+    for (const val of collectSensitiveValues(env)) {
+      r.addSecret(val);
+    }
     return r;
   }
 

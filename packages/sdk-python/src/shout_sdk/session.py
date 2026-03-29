@@ -21,6 +21,7 @@ from .protocol import (
     encode_resize_frame,
 )
 from ._ws import ReconnectingWebSocket
+from .redact import StreamRedactor
 
 logger = logging.getLogger('shout_sdk')
 
@@ -60,6 +61,7 @@ class ShoutSession:
         cols: int = 80,
         rows: int = 24,
         api_url: str = 'https://api.shout.run',
+        redact_secrets: list[str] | None = None,
     ) -> None:
         self.api_key = api_key
         self.title = title
@@ -85,6 +87,12 @@ class ShoutSession:
 
         # Event callbacks
         self._callbacks: dict[str, list[Callable[..., Any]]] = {}
+
+        # Secret redaction
+        self._redactor = StreamRedactor()
+        if redact_secrets:
+            for secret in redact_secrets:
+                self._redactor.add_secret(secret)
 
     @property
     def state(self) -> SessionState:
@@ -197,9 +205,11 @@ class ShoutSession:
             return
 
         text = data.decode('utf-8') if isinstance(data, bytes) else data
+        safe = self._redactor.redact(text)
 
-        with self._buffer_lock:
-            self._buffer += text
+        if safe:
+            with self._buffer_lock:
+                self._buffer += safe
 
         # Debounce flush
         if self._debounce_timer:
@@ -207,6 +217,10 @@ class ShoutSession:
         self._debounce_timer = threading.Timer(CHUNK_DEBOUNCE_S, self._flush_buffer)
         self._debounce_timer.daemon = True
         self._debounce_timer.start()
+
+    def add_secret(self, value: str) -> None:
+        """Add a secret value to redact from broadcast output at runtime."""
+        self._redactor.add_secret(value)
 
     def resize(self, cols: int, rows: int) -> None:
         """Update terminal dimensions."""
@@ -225,6 +239,10 @@ class ShoutSession:
         # Cancel debounce and flush
         if self._debounce_timer:
             self._debounce_timer.cancel()
+        remaining = self._redactor.flush()
+        if remaining:
+            with self._buffer_lock:
+                self._buffer += remaining
         self._flush_buffer()
 
         # Send end frame
