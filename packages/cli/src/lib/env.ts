@@ -44,3 +44,22 @@ export function stripSensitiveEnv(
   clean.SHOUT_SESSION = '1';
   return clean;
 }
+
+/**
+ * Collects the *values* of sensitive env vars (matching SENSITIVE_ENV_PREFIXES).
+ * Used by the stream redactor to mask known secrets in broadcast output.
+ * Skips values ≤ 3 characters to avoid false positives.
+ */
+export function collectSensitiveValues(
+  env: Record<string, string | undefined>,
+): string[] {
+  const values: string[] = [];
+  for (const [key, val] of Object.entries(env)) {
+    if (val === undefined || val.length <= 3) continue;
+    const upper = key.toUpperCase();
+    if (SENSITIVE_ENV_PREFIXES.some((prefix) => upper.startsWith(prefix))) {
+      values.push(val);
+    }
+  }
+  return values;
+}

@@ -41,11 +41,17 @@ program
   .option('-t, --title <title>', 'Session title')
   .option('-v, --visibility <visibility>', 'Visibility: public, followers, private')
   .option('--tags <tags>', 'Comma-separated tags')
-  .action(async (options: { title?: string; visibility?: string; tags?: string }) => {
+  .option('--no-redact', 'Disable secret redaction in broadcast stream')
+  .option('--redact-file <path>', 'Load additional secrets from a .env file')
+  .option('--redact-value <value...>', 'Add individual secret values to redact')
+  .action(async (options: { title?: string; visibility?: string; tags?: string; redact?: boolean; redactFile?: string; redactValue?: string[] }) => {
     await broadcast({
       title: options.title,
       visibility: options.visibility as 'public' | 'followers' | 'private' | undefined,
       tags: options.tags?.split(',').map((t) => t.trim()),
+      noRedact: options.redact === false,
+      redactFile: options.redactFile,
+      redactValue: options.redactValue,
     });
   });
 
