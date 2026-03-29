@@ -30,7 +30,7 @@ cd packages/sdk-python && python -m build
 cd packages/mcp-python && python -m build
 ```
 
-Worker has Vitest tests: `pnpm --filter @shout/worker test`.
+Worker has Vitest tests: `pnpm --filter @shout/worker test`. CLI also has Vitest tests: `pnpm --filter @shout/cli exec vitest run`. `pnpm test` runs all tests across the monorepo.
 
 ## Architecture
 
@@ -45,13 +45,14 @@ packages/
   sdk-python/                   — Python SDK (PyPI: shout-run-sdk)
   mcp-python/                   — Python MCP server (PyPI: shout-run-mcp)
   vt-wasm/      @shout/vt-wasm  — Rust WASM virtual terminal parser (vt100, late-join snapshots)
+  demo/                           — standalone Gemini AI agent demo (not in workspace)
 ```
 
 ### Data flow
 
-CLI captures PTY output → strips sensitive env vars → encodes binary frames → WebSocket to Worker → SessionHub Durable Object fans out to viewer WebSockets → Web app decodes frames into xterm.js.
+CLI captures PTY output → redacts known secret values → strips sensitive env vars → encodes binary frames → WebSocket to Worker → SessionHub Durable Object fans out to viewer WebSockets → Web app decodes frames into xterm.js.
 
-SDK and MCP packages provide the same broadcast capability programmatically (TypeScript and Python).
+SDK and MCP packages provide the same broadcast capability programmatically (TypeScript and Python), with optional secret redaction.
 
 ### Binary WebSocket protocol (`packages/shared/src/protocol.ts`)
 
@@ -101,17 +102,29 @@ Key endpoints:
 
 ### CLI auth flow
 
-`shout login` → GitHub device flow routed through worker (`/api/auth/device-code`, `/api/auth/token`) → worker exchanges code for GitHub token, creates/finds user, returns JWT → CLI stores JWT via keytar (OS keychain) with fallback to `~/.shout/config.json`.
+`shout login` → GitHub device flow routed through worker (`/api/auth/device-code`, `/api/auth/token`) → worker exchanges code for GitHub token, creates/finds user, returns JWT (7-day expiry) → CLI stores JWT via keytar (OS keychain) with fallback to `~/.shout/config.json`.
 
 ### Web app (`packages/web/`)
 
 Next.js App Router. Routes: `/` (homepage with left-aligned hero, searchable unified feed with upvoting), `/about` (documentation hub), `/[username]` (profile + sessions), `/[username]/[sessionId]` (viewer), `/embed/[sessionId]` (iframe-embeddable viewer), `/embed/[sessionId]/script.js` (embed script), `/privacy`, `/terms`. Additional generated routes: `robots.ts` (dynamic robots.txt with rules for GPTBot, ClaudeBot, PerplexityBot), `sitemap.ts` (dynamic sitemap.xml), and `/llms.txt` (serves `public/llms.txt` for AI discovery). Zustand for client state.
 
-Terminal and PlayerBar are `next/dynamic` with `ssr: false` (xterm.js needs browser APIs). Theme system: `ThemeProvider` stores `'dark' | 'light'` in `localStorage('shout-theme')`, sets `data-theme` attribute on `<html>`. CSS variables (`--shout-bg`, `--shout-surface`, `--shout-text`, `--shout-accent`, etc.) defined in `globals.css` for both themes. Project uses **Tailwind v4** with CSS-first configuration via `@theme` block in `globals.css` (no `tailwind.config.ts` — Tailwind v4 replaces the JS config).
+Terminal and PlayerBar are `next/dynamic` with `ssr: false` (xterm.js needs browser APIs). Theme system: `ThemeProvider` stores `'dark' | 'light'` in `localStorage('shout-theme')`, sets `data-theme` attribute on `<html>`. CSS variables (`--shout-bg`, `--shout-surface`, `--shout-surface-dim`, `--shout-text`, `--shout-accent`, etc.) defined in `globals.css` for both themes. `surface-dim` is used for secondary chrome (terminal toolbar, search bar) to create depth hierarchy against `surface` (cards). Project uses **Tailwind v4** with CSS-first configuration via `@theme` block in `globals.css` (no `tailwind.config.ts` — Tailwind v4 replaces the JS config).
 
 ### CLI environment stripping (`packages/cli/src/lib/env.ts`)
 
-Before PTY spawn, env vars matching 26 sensitive prefixes are removed: `AWS_SECRET`, `AWS_SESSION_TOKEN`, `DATABASE_URL`, `GITHUB_TOKEN`, `GH_TOKEN`, `NPM_TOKEN`, `NODE_AUTH_TOKEN`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET`, `PRIVATE_KEY`, `SECRET_KEY`, `ENCRYPTION_KEY`, `JWT_SECRET`, `SESSION_SECRET`, `COOKIE_SECRET`, `TURSO_AUTH_TOKEN`, `CLOUDFLARE_API_TOKEN`, `SENTRY_AUTH_TOKEN`, `SLACK_TOKEN`, `SLACK_BOT_TOKEN`, `DISCORD_TOKEN`, `TWILIO_AUTH_TOKEN`, `SENDGRID_API_KEY`, `MAILGUN_API_KEY`. The spawned shell gets a clean env plus `SHOUT_SESSION=1`.
+Before PTY spawn, env vars matching 25 sensitive prefixes are removed: `AWS_SECRET`, `AWS_SESSION_TOKEN`, `DATABASE_URL`, `GITHUB_TOKEN`, `GH_TOKEN`, `NPM_TOKEN`, `NODE_AUTH_TOKEN`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `STRIPE_SECRET`, `PRIVATE_KEY`, `SECRET_KEY`, `ENCRYPTION_KEY`, `JWT_SECRET`, `SESSION_SECRET`, `COOKIE_SECRET`, `TURSO_AUTH_TOKEN`, `CLOUDFLARE_API_TOKEN`, `SENTRY_AUTH_TOKEN`, `SLACK_TOKEN`, `SLACK_BOT_TOKEN`, `DISCORD_TOKEN`, `TWILIO_AUTH_TOKEN`, `SENDGRID_API_KEY`, `MAILGUN_API_KEY`. The spawned shell gets a clean env plus `SHOUT_SESSION=1`.
+
+### Secret redaction (`packages/shared/src/redact.ts`)
+
+The `StreamRedactor` class in `@shout/shared` performs known-values string replacement on the broadcast output stream. It collects actual secret values at session start and replaces them with `[REDACTED]` before data reaches the WebSocket. Uses an overlap buffer to catch secrets split across PTY chunks. No regex on the output stream — exact string matching avoids mangling ANSI escape sequences.
+
+**CLI** — enabled by default via `createCliRedactor()` in `packages/cli/src/lib/redact.ts`. Collects values of env vars matching `SENSITIVE_ENV_PREFIXES`. Flags: `--no-redact`, `--redact-file <path>`, `--redact-value <value...>`. Local terminal sees unredacted output; only the broadcast stream is scrubbed.
+
+**SDKs** — opt-in via `redactSecrets` (TS) / `redact_secrets` (Python) constructor option, or `addSecret()`/`add_secret()` at runtime. Python implementation in `packages/sdk-python/src/shout_sdk/redact.py`.
+
+### CLI auth and JWT expiry (`packages/cli/src/lib/auth.ts`)
+
+`shout login` uses GitHub device flow → worker issues a JWT (7-day expiry, signed with `JWT_SECRET`). CLI stores the JWT via keytar (OS keychain) with fallback to `~/.shout/config.json`. The `isLoggedIn()` function decodes the JWT `exp` claim locally to detect expired tokens without a network call. `whoami` shows "Session expired" for stale tokens, and `broadcast` auto-clears expired tokens and re-prompts login in TTY mode.
 
 ## Environment setup
 
@@ -138,4 +151,4 @@ CI (`.github/workflows/ci.yml`): lint + typecheck + build on PRs and pushes to m
 - **Web** uses `next.config.js` with `transpilePackages: ['@shout/shared']`; **Tailwind v4** configured via `@theme` in `globals.css` (no JS config file)
 - **Python packages** use hatchling for builds, Python >= 3.10
 - **Worker secrets** are set via `wrangler secret put`, not in wrangler.toml
-- **Prettier**: semicolons, single quotes, trailing commas, 100 char width
+- **Prettier**: semicolons, single quotes, trailing commas, 100 char width, 2-space indent
