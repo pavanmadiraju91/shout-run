@@ -16,11 +16,12 @@ import {
   type CreateSessionResponse,
   type ApiResponse,
 } from '@shout/shared';
-import { getToken } from '../lib/auth.js';
+import { getToken, isLoggedIn, removeToken } from '../lib/auth.js';
 import { login } from './login.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
 import { formatDuration, formatBytes } from '../lib/format.js';
 import { stripSensitiveEnv } from '../lib/env.js';
+import { StreamRedactor } from '../lib/redact.js';
 
 const API_BASE = process.env.SHOUT_API_URL ?? 'https://api.shout.run';
 
@@ -28,6 +29,9 @@ interface BroadcastOptions {
   title?: string;
   visibility?: 'public' | 'followers' | 'private';
   tags?: string[];
+  noRedact?: boolean;
+  redactFile?: string;
+  redactValue?: string[];
 }
 
 interface BroadcastStats {
@@ -72,10 +76,15 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
 
   // Check authentication — auto-login if needed
   let tokens = await getToken();
-  if (!tokens || !tokens.accessToken) {
+  if (!tokens || !tokens.accessToken || !(await isLoggedIn())) {
+    if (tokens && !(await isLoggedIn())) {
+      // Token exists but expired — clear it so login flow starts fresh
+      await removeToken();
+      tokens = null;
+    }
     if (isTTY) {
       console.log();
-      console.log(chalk.yellow('  Not logged in. Let\'s fix that...'));
+      console.log(chalk.yellow(tokens ? '  Not logged in. Let\'s fix that...' : '  Session expired. Let\'s re-authenticate...'));
       console.log();
       await login();
       tokens = await getToken();
@@ -85,7 +94,7 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
       }
       console.log();
     } else {
-      console.log(chalk.red('Not logged in. Run `shout login` first.'));
+      console.log(chalk.red(tokens ? 'Not logged in. Run `shout login` first.' : 'Session expired. Run `shout logout && shout login` first.'));
       process.exit(1);
     }
   }
@@ -157,6 +166,16 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   let buffer = '';
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isEnding = false;
+
+  // Set up stream redactor for broadcast output (shared across pipe and PTY modes)
+  const redactor = new StreamRedactor();
+  if (!options.noRedact) {
+    redactor.collectFromEnv(process.env);
+    if (options.redactFile) redactor.collectFromFile(options.redactFile);
+    if (options.redactValue) {
+      for (const val of options.redactValue) redactor.addSecret(val);
+    }
+  }
 
   // Max payload per WebSocket message — stay well under Cloudflare's 1 MB limit
   const MAX_CHUNK_BYTES = 64 * 1024; // 64 KB
@@ -268,6 +287,10 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
       clearTimeout(debounceTimer);
     }
 
+    // Flush any remaining redactor overlap buffer
+    const remaining = redactor.flush();
+    if (remaining) buffer += remaining;
+
     if (buffer.length > 0) {
       flushBuffer();
     }
@@ -310,9 +333,14 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
     // ── Pipe mode: read stdin and forward ──
     process.stdin.setEncoding('utf-8');
     process.stdin.on('data', (chunk: string) => {
-      buffer += chunk;
-      if (debounceTimer) clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
+      // Normalize bare \n to \r\n so xterm.js viewers render line breaks correctly
+      const normalized = chunk.replace(/\r?\n/g, '\r\n');
+      const safe = redactor.redact(normalized);
+      if (safe) {
+        buffer += safe;
+        if (debounceTimer) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
+      }
     });
 
     process.stdin.on('end', () => {
@@ -359,13 +387,16 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
 
         // PTY output → local terminal + WebSocket
         ptyProcess.onData((data: string) => {
-          // Write to local terminal so the user sees their own output
+          // Write to local terminal unredacted (user's own machine)
           process.stdout.write(data);
 
-          // Buffer and send to WebSocket
-          buffer += data;
-          if (debounceTimer) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
+          // Redact known secrets before buffering for broadcast
+          const safe = redactor.redact(data);
+          if (safe) {
+            buffer += safe;
+            if (debounceTimer) clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(flushBuffer, CHUNK_DEBOUNCE_MS);
+          }
         });
 
         // User keyboard input → PTY

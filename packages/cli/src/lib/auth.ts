@@ -17,6 +17,28 @@ interface StoredConfig {
 
 let keytar: typeof import('keytar') | null = null;
 
+/**
+ * Decode a JWT payload without verifying the signature.
+ * Used to check the `exp` claim locally before making network calls.
+ */
+function decodeJwtPayload(token: string): { exp?: number } | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/** Returns true if the JWT's exp claim is in the past (or missing). */
+function isTokenExpired(token: string): boolean {
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) return true;
+  return payload.exp < Math.floor(Date.now() / 1000);
+}
+
 async function getKeytar(): Promise<typeof import('keytar') | null> {
   if (keytar !== null) return keytar;
   try {
@@ -136,5 +158,6 @@ export async function removeToken(): Promise<void> {
 
 export async function isLoggedIn(): Promise<boolean> {
   const tokens = await getToken();
-  return tokens !== null && tokens.accessToken.length > 0;
+  if (!tokens || !tokens.accessToken) return false;
+  return !isTokenExpired(tokens.accessToken);
 }

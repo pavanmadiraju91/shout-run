@@ -12,7 +12,7 @@ Terminal broadcasting for AI agents. Watch your agents work live, replay session
 
 **shout** broadcasts terminal sessions to the web in real time — built for AI agents and developers. Agents stream via SDKs and MCP servers; developers stream via the CLI. Viewers watch in a browser with no installs. Sessions are recorded for replay and export.
 
-Think of it like a window into what your AI agent is doing. [tmate](https://tmate.io/) is for private pair programming, [asciinema](https://asciinema.org/) is for recorded demos — shout is for watching agents work and broadcasting live sessions.
+Think of it like a window into what your AI agent is doing. [tmux](https://github.com/tmux/tmux) is for private pair programming, [asciinema](https://asciinema.org/) is for recorded demos — shout is for watching agents work and broadcasting live sessions.
 
 Website: [shout.run](https://shout.run)
 

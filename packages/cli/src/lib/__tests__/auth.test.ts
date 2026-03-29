@@ -17,6 +17,18 @@ vi.mock('keytar', () => mockKeytar);
 const CONFIG_DIR = path.join(os.homedir(), '.shout');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
+/** Create a fake JWT with a given exp (seconds since epoch). */
+function fakeJwt(exp: number): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({ sub: '1', exp })).toString('base64url');
+  return `${header}.${payload}.fakesignature`;
+}
+
+const FUTURE_EXP = Math.floor(Date.now() / 1000) + 86400; // 24h from now
+const PAST_EXP = Math.floor(Date.now() / 1000) - 3600; // 1h ago
+const VALID_TOKEN = fakeJwt(FUTURE_EXP);
+const EXPIRED_TOKEN = fakeJwt(PAST_EXP);
+
 describe('auth', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,7 +47,7 @@ describe('auth', () => {
 
     it('reads from config file when keytar unavailable', async () => {
       const storedConfig = {
-        accessToken: 'test-token',
+        accessToken: VALID_TOKEN,
         username: 'testuser',
         avatarUrl: 'https://example.com/avatar.png',
       };
@@ -48,7 +60,7 @@ describe('auth', () => {
       const result = await getToken();
 
       expect(result).toEqual({
-        accessToken: 'test-token',
+        accessToken: VALID_TOKEN,
         username: 'testuser',
         avatarUrl: 'https://example.com/avatar.png',
       });
@@ -72,13 +84,13 @@ describe('auth', () => {
 
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(configMetadata));
-      mockKeytar.getPassword.mockResolvedValue('keytar-token');
+      mockKeytar.getPassword.mockResolvedValue(VALID_TOKEN);
 
       const { getToken } = await import('../auth.js');
       const result = await getToken();
 
       expect(result).toEqual({
-        accessToken: 'keytar-token',
+        accessToken: VALID_TOKEN,
         username: 'testuser',
         avatarUrl: 'https://example.com/avatar.png',
       });
@@ -92,7 +104,7 @@ describe('auth', () => {
 
       const { saveToken } = await import('../auth.js');
       await saveToken({
-        accessToken: 'test-token',
+        accessToken: VALID_TOKEN,
         username: 'testuser',
         avatarUrl: 'https://example.com/avatar.png',
       });
@@ -110,7 +122,7 @@ describe('auth', () => {
 
       const { saveToken } = await import('../auth.js');
       await saveToken({
-        accessToken: 'test-token',
+        accessToken: VALID_TOKEN,
         username: 'testuser',
         avatarUrl: 'https://example.com/avatar.png',
       });
@@ -118,7 +130,7 @@ describe('auth', () => {
       expect(mockKeytar.setPassword).toHaveBeenCalledWith(
         'shout-cli',
         'default',
-        'test-token'
+        VALID_TOKEN
       );
     });
   });
@@ -146,9 +158,9 @@ describe('auth', () => {
       expect(result).toBe(false);
     });
 
-    it('returns true when token exists', async () => {
+    it('returns true when token exists and is not expired', async () => {
       const storedConfig = {
-        accessToken: 'test-token',
+        accessToken: VALID_TOKEN,
         username: 'testuser',
         avatarUrl: 'https://example.com/avatar.png',
       };
@@ -160,6 +172,22 @@ describe('auth', () => {
       const { isLoggedIn } = await import('../auth.js');
       const result = await isLoggedIn();
       expect(result).toBe(true);
+    });
+
+    it('returns false when token exists but is expired', async () => {
+      const storedConfig = {
+        accessToken: EXPIRED_TOKEN,
+        username: 'testuser',
+        avatarUrl: 'https://example.com/avatar.png',
+      };
+
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(storedConfig));
+      mockKeytar.getPassword.mockRejectedValue(new Error('keytar unavailable'));
+
+      const { isLoggedIn } = await import('../auth.js');
+      const result = await isLoggedIn();
+      expect(result).toBe(false);
     });
   });
 });
