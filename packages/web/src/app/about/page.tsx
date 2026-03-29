@@ -169,6 +169,10 @@ export default function AboutPage() {
                   'Privacy controls',
                   'Public or private. Private sessions leave no replay data.',
                 ],
+                [
+                  'Secret redaction',
+                  'Sensitive values (API keys, tokens) are automatically replaced with [REDACTED] in the broadcast stream. Your local terminal is unaffected.',
+                ],
               ] as const
             ).map(([title, desc]) => (
               <div key={title}>
@@ -437,7 +441,7 @@ session.end()`}
                 ],
                 [
                   'Is my data private?',
-                  'You control session visibility: public or private. Private sessions leave no replay data on the server.',
+                  'You control session visibility: public or private. Private sessions leave no replay data on the server. The CLI automatically redacts sensitive env var values (API keys, tokens, database URLs) from the broadcast stream — viewers see [REDACTED] instead. You can add custom secrets via --redact-value or --redact-file.',
                 ],
                 [
                   'Can AI agents use shout?',

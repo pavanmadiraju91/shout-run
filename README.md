@@ -56,6 +56,39 @@ tail -f /var/log/app.log | shout
 | `followers` | Only your followers see it |
 | `private` | Unlisted. Live-only — no replay after it ends |
 
+### Secret redaction
+
+Shout automatically redacts sensitive values from the broadcast stream. Your local terminal sees everything — only the broadcast output is scrubbed.
+
+**CLI** — enabled by default. Collects values of sensitive env vars (AWS keys, GitHub tokens, OpenAI keys, etc.) at session start and replaces them with `[REDACTED]` in the stream.
+
+```bash
+shout                                          # auto-redacts env var secrets
+shout --redact-value "my-custom-secret"        # add extra values to redact
+shout --redact-file .env                       # load secrets from a .env file
+shout --no-redact                              # disable redaction entirely
+```
+
+**SDKs** — opt-in via constructor options or at runtime:
+
+```typescript
+const session = new ShoutSession({
+  apiKey: 'shout_sk_...',
+  redactSecrets: [process.env.DB_PASSWORD],
+});
+session.addSecret(dynamicSecret);  // add at runtime
+```
+
+```python
+session = ShoutSession(
+    api_key="shout_sk_...",
+    redact_secrets=[os.environ["DB_PASSWORD"]],
+)
+session.add_secret(dynamic_secret)  # add at runtime
+```
+
+This uses exact string matching (not regex) so it won't mangle ANSI escape sequences or terminal control codes.
+
 ### Replay
 
 After a session ends, the full recording is available for replay at the same URL. Late joiners during a live session receive a terminal state snapshot so they see the current screen immediately. Private sessions don't store replay data.
@@ -198,6 +231,9 @@ Broadcast options:
   -t, --title <title>            Session title
   -v, --visibility <visibility>  public, followers, or private
   --tags <tags>                  Comma-separated tags
+  --no-redact                    Disable secret redaction
+  --redact-file <path>           Load secrets from a .env file
+  --redact-value <value...>      Add values to redact
 ```
 
 ## Architecture

@@ -39,6 +39,7 @@ npm install -g shout-run
 - Free and open-source (MIT license)
 - Supports Linux, macOS, and Windows
 - Sessions can last up to 4 hours
+- Built-in secret redaction: sensitive env var values (API keys, tokens) are automatically replaced with [REDACTED] in the broadcast stream
 - Binary WebSocket protocol for low-latency streaming
 - Late joiners get a terminal state snapshot so they see the current screen immediately
 - Replay export in asciicast v2 format (compatible with asciinema-player)
