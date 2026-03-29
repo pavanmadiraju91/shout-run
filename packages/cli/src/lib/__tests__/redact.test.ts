@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { StreamRedactor } from '../redact.js';
+import { collectSensitiveValues } from '../env.js';
 
 describe('StreamRedactor', () => {
   describe('addSecret', () => {
@@ -27,14 +28,15 @@ describe('StreamRedactor', () => {
     });
   });
 
-  describe('collectFromEnv', () => {
+  describe('collectSensitiveValues', () => {
     it('collects values of sensitive env vars', () => {
-      const r = new StreamRedactor();
-      r.collectFromEnv({
+      const values = collectSensitiveValues({
         GITHUB_TOKEN: 'ghp_abc123def456',
         HOME: '/home/user',
         OPENAI_API_KEY: 'sk-proj-abcdef',
       });
+      const r = new StreamRedactor();
+      for (const v of values) r.addSecret(v);
       expect(r.hasSecrets).toBe(true);
       const result = r.redact('token is ghp_abc123def456 and key is sk-proj-abcdef');
       const flushed = r.flush();
@@ -42,15 +44,13 @@ describe('StreamRedactor', () => {
     });
 
     it('skips short values', () => {
-      const r = new StreamRedactor();
-      r.collectFromEnv({ GITHUB_TOKEN: '1' });
-      expect(r.hasSecrets).toBe(false);
+      const values = collectSensitiveValues({ GITHUB_TOKEN: '1' });
+      expect(values).toHaveLength(0);
     });
 
     it('skips undefined values', () => {
-      const r = new StreamRedactor();
-      r.collectFromEnv({ GITHUB_TOKEN: undefined });
-      expect(r.hasSecrets).toBe(false);
+      const values = collectSensitiveValues({ GITHUB_TOKEN: undefined });
+      expect(values).toHaveLength(0);
     });
   });
 

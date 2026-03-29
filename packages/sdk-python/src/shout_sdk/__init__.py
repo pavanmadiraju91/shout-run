@@ -2,6 +2,7 @@
 
 from .session import ShoutSession, SessionState
 from .protocol import FrameType
+from .redact import StreamRedactor
 
-__all__ = ['ShoutSession', 'SessionState', 'FrameType']
+__all__ = ['ShoutSession', 'SessionState', 'FrameType', 'StreamRedactor']
 __version__ = '0.1.4'

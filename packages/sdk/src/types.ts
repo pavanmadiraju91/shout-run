@@ -13,6 +13,8 @@ export interface ShoutSessionOptions {
   rows?: number;
   /** API base URL (default: https://api.shout.run) */
   apiUrl?: string;
+  /** Secret values to redact from broadcast output */
+  redactSecrets?: string[];
 }
 
 export interface ShoutSessionInfo {

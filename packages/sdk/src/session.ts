@@ -10,6 +10,7 @@ import {
   CHUNK_DEBOUNCE_MS,
   WS_CLOSE,
   DEFAULT_RATE_LIMITS,
+  StreamRedactor,
   type CreateSessionResponse,
   type ApiResponse,
 } from '@shout/shared';
@@ -48,6 +49,7 @@ export class ShoutSession extends EventEmitter {
   private bytesThisSecond = 0;
   private lastSecondReset = 0;
   private maxBytesPerSecond = DEFAULT_RATE_LIMITS.maxBytesPerSecond;
+  private redactor: StreamRedactor;
 
   constructor(options: ShoutSessionOptions) {
     super();
@@ -57,6 +59,12 @@ export class ShoutSession extends EventEmitter {
     this.cols = options.cols ?? 80;
     this.rows = options.rows ?? 24;
     this.apiUrl = options.apiUrl ?? 'https://api.shout.run';
+    this.redactor = new StreamRedactor();
+    if (options.redactSecrets) {
+      for (const secret of options.redactSecrets) {
+        this.redactor.addSecret(secret);
+      }
+    }
   }
 
   get state(): ShoutSessionState {
@@ -180,12 +188,20 @@ export class ShoutSession extends EventEmitter {
     }
 
     const str = typeof data === 'string' ? data : data.toString('utf-8');
-    this.buffer += str;
+    const safe = this.redactor.redact(str);
+    if (safe) {
+      this.buffer += safe;
+    }
 
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
     this.debounceTimer = setTimeout(() => this.flushBuffer(), CHUNK_DEBOUNCE_MS);
+  }
+
+  /** Add a secret value to redact from broadcast output at runtime. */
+  addSecret(value: string): void {
+    this.redactor.addSecret(value);
   }
 
   resize(cols: number, rows: number): void {
@@ -207,6 +223,8 @@ export class ShoutSession extends EventEmitter {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
+    const remaining = this.redactor.flush();
+    if (remaining) this.buffer += remaining;
     this.flushBuffer();
 
     // Send end frame

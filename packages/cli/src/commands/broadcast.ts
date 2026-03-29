@@ -21,7 +21,7 @@ import { login } from './login.js';
 import { ReconnectingWebSocket } from '../lib/stream.js';
 import { formatDuration, formatBytes } from '../lib/format.js';
 import { stripSensitiveEnv } from '../lib/env.js';
-import { StreamRedactor } from '../lib/redact.js';
+import { createCliRedactor } from '../lib/redact.js';
 
 const API_BASE = process.env.SHOUT_API_URL ?? 'https://api.shout.run';
 
@@ -168,14 +168,13 @@ export async function broadcast(options: BroadcastOptions = {}): Promise<void> {
   let isEnding = false;
 
   // Set up stream redactor for broadcast output (shared across pipe and PTY modes)
-  const redactor = new StreamRedactor();
-  if (!options.noRedact) {
-    redactor.collectFromEnv(process.env);
-    if (options.redactFile) redactor.collectFromFile(options.redactFile);
-    if (options.redactValue) {
-      for (const val of options.redactValue) redactor.addSecret(val);
-    }
-  }
+  const redactor = options.noRedact
+    ? createCliRedactor({})
+    : createCliRedactor({
+        env: process.env,
+        redactFile: options.redactFile,
+        redactValues: options.redactValue,
+      });
 
   // Max payload per WebSocket message — stay well under Cloudflare's 1 MB limit
   const MAX_CHUNK_BYTES = 64 * 1024; // 64 KB
