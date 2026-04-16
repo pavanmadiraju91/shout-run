@@ -17,7 +17,7 @@
     "@libsql/client": "^0.14.0",
     "@shout/shared": "workspace:*",
     "drizzle-orm": "^0.38.0",
-    "hono": "^4.6.0"
+    "hono": "^4.12.14"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260313.1",
