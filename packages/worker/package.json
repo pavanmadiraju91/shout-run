@@ -14,15 +14,15 @@
     "clean": "rm -rf dist .turbo .wrangler"
   },
   "dependencies": {
-    "@libsql/client": "^0.14.0",
+    "@libsql/client": "^0.17.3",
     "@shout/shared": "workspace:*",
-    "drizzle-orm": "^0.38.0",
-    "hono": "^4.6.0"
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.16"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260313.1",
+    "@cloudflare/workers-types": "^4.20260501.1",
     "@shout/vt-wasm": "workspace:*",
-    "typescript": "^5.7.0",
-    "wrangler": "^4.73.0"
+    "typescript": "^6.0.3",
+    "wrangler": "^4.87.0"
   }
 }
