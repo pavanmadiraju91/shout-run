@@ -29,10 +29,16 @@ export class ReconnectingWebSocket extends EventEmitter<ReconnectingWebSocketEve
   private readonly maxQueueSize = 1000;
   private isConnected = false;
   private isClosed = false;
+  private headers: Record<string, string>;
 
-  constructor(url: string, options: ReconnectingWebSocketOptions = {}) {
+  constructor(
+    url: string,
+    headers: Record<string, string> = {},
+    options: ReconnectingWebSocketOptions = {},
+  ) {
     super();
     this.url = url;
+    this.headers = headers;
     this.maxReconnectDelay = options.maxReconnectDelay ?? 30000;
     this.initialReconnectDelay = options.initialReconnectDelay ?? 1000;
     this.reconnectDelay = this.initialReconnectDelay;
@@ -42,7 +48,9 @@ export class ReconnectingWebSocket extends EventEmitter<ReconnectingWebSocketEve
   connect(): void {
     if (this.isClosed) return;
 
-    this.ws = new WebSocket(this.url);
+    this.ws = new WebSocket(this.url, {
+      headers: this.headers,
+    });
     this.ws.binaryType = 'arraybuffer';
 
     this.ws.on('open', () => {

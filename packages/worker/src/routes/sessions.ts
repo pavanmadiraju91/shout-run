@@ -101,7 +101,13 @@ sessionsRouter.post('/', authMiddleware, async (c) => {
 
   // Generate WebSocket URL
   const host = c.req.header('Host') || 'localhost:8787';
-  const protocol = host.includes('localhost') ? 'ws' : 'wss';
+  // Only downgrade to ws:// for genuine local dev hosts. An unanchored
+  // substring match (host.includes('localhost')) would serve plaintext ws://
+  // to any client-controlled host containing 'localhost' (e.g.
+  // localhost.attacker.com), downgrading the credential-bearing channel off TLS.
+  const hostname = host.split(':')[0];
+  const isLocal = hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1';
+  const protocol = isLocal ? 'ws' : 'wss';
   const wsUrl = `${protocol}://${host}/api/sessions/${sessionId}/ws/broadcaster`;
 
   return c.json<ApiResponse<CreateSessionResponse>>({
@@ -566,8 +572,14 @@ sessionsRouter.get('/:id/ws/broadcaster', async (c) => {
     return c.json<ApiResponse>({ ok: false, error: 'WebSocket upgrade required' }, 426);
   }
 
-  // Validate auth token from query param
-  const token = c.req.query('token');
+  // Validate auth token. Prefer the Authorization header (keeps the
+  // credential out of URLs/logs — CWE-598); fall back to the ?token= query
+  // param for backward compatibility with older clients.
+  const authHeader = c.req.header('Authorization');
+  const token =
+    authHeader && authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : c.req.query('token');
   if (!token) {
     return c.json<ApiResponse>({ ok: false, error: 'Missing auth token' }, 401);
   }
@@ -767,6 +779,14 @@ sessionsRouter.get('/:id/ws/viewer', async (c) => {
   });
 
   if (!session) {
+    return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
+  }
+
+  // Private sessions must not stream live output to viewers. The REST read
+  // paths (/content, /replay, /export) already block 'private'; this aligns
+  // the live viewer WebSocket with that same gate. Public/followers behavior
+  // is unchanged.
+  if (session.visibility === 'private') {
     return c.json<ApiResponse>({ ok: false, error: 'Session not found' }, 404);
   }
 

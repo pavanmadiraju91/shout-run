@@ -120,9 +120,12 @@ export class ShoutSession extends EventEmitter {
     this.startTime = Date.now();
     this.lastSecondReset = this.startTime;
 
-    // 2. Connect WebSocket with API key as query param
-    const wsUrlWithAuth = `${result.data.wsUrl}?token=${encodeURIComponent(this.apiKey)}`;
-    this.ws = new ReconnectingWebSocket(wsUrlWithAuth);
+    // 2. Connect WebSocket, passing the API key via the Authorization header
+    // rather than a URL query param (query strings leak into proxy/CDN access
+    // logs, browser history, and Referer headers — CWE-598).
+    this.ws = new ReconnectingWebSocket(result.data.wsUrl, {
+      Authorization: `Bearer ${this.apiKey}`,
+    });
 
     // Set up WebSocket event handlers
     this.ws.on('open', () => {
