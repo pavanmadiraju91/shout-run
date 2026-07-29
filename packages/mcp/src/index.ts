@@ -13,6 +13,7 @@ import {
   CHUNK_DEBOUNCE_MS,
   WS_CLOSE,
   DEFAULT_RATE_LIMITS,
+  StreamRedactor,
   type CreateSessionResponse,
   type ApiResponse,
 } from '@shout/shared';
@@ -37,9 +38,59 @@ interface ActiveSession {
   rateLimitTimer?: ReturnType<typeof setTimeout>;
   bytesThisSecond: number;
   lastSecondReset: number;
+  redactor: StreamRedactor;
 }
 
 let activeSession: ActiveSession | null = null;
+
+// ── Secret redaction ───────────────────────────────────────
+
+/** Env var prefixes whose values should never be broadcast. */
+const SENSITIVE_ENV_PREFIXES = [
+  'AWS_SECRET',
+  'AWS_SESSION_TOKEN',
+  'DATABASE_URL',
+  'GITHUB_TOKEN',
+  'GH_TOKEN',
+  'NPM_TOKEN',
+  'NODE_AUTH_TOKEN',
+  'OPENAI_API_KEY',
+  'ANTHROPIC_API_KEY',
+  'STRIPE_SECRET',
+  'PRIVATE_KEY',
+  'SECRET_KEY',
+  'ENCRYPTION_KEY',
+  'JWT_SECRET',
+  'SESSION_SECRET',
+  'COOKIE_SECRET',
+  'TURSO_AUTH_TOKEN',
+  'CLOUDFLARE_API_TOKEN',
+  'SENTRY_AUTH_TOKEN',
+  'SLACK_TOKEN',
+  'SLACK_BOT_TOKEN',
+  'DISCORD_TOKEN',
+  'TWILIO_AUTH_TOKEN',
+  'SENDGRID_API_KEY',
+  'MAILGUN_API_KEY',
+  'SHOUT_API_KEY',
+];
+
+/**
+ * Builds a StreamRedactor seeded with the values of sensitive env vars, so
+ * agent-captured terminal output containing the server's own credentials is
+ * masked before broadcast — matching the redaction the SDK/CLI already apply.
+ */
+function createRedactor(): StreamRedactor {
+  const redactor = new StreamRedactor();
+  for (const [key, val] of Object.entries(process.env)) {
+    if (val === undefined || val.length <= 3) continue;
+    const upper = key.toUpperCase();
+    if (SENSITIVE_ENV_PREFIXES.some((prefix) => upper.startsWith(prefix))) {
+      redactor.addSecret(val);
+    }
+  }
+  return redactor;
+}
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -118,9 +169,12 @@ async function createAndConnectSession(title: string, visibility: string): Promi
   // Derive viewer URL
   const webBase = API_URL.replace('api.', '');
 
-  // Connect WebSocket
-  const wsUrlWithAuth = `${wsUrl}?token=${encodeURIComponent(API_KEY!)}`;
-  const ws = new WebSocket(wsUrlWithAuth);
+  // Connect WebSocket, passing the API key via the Authorization header
+  // rather than a URL query param (query strings leak into proxy/CDN access
+  // logs, browser history, and Referer headers — CWE-598).
+  const ws = new WebSocket(wsUrl, {
+    headers: { Authorization: `Bearer ${API_KEY!}` },
+  });
   ws.binaryType = 'arraybuffer';
 
   const session: ActiveSession = {
@@ -134,6 +188,7 @@ async function createAndConnectSession(title: string, visibility: string): Promi
     debounceTimer: null,
     bytesThisSecond: 0,
     lastSecondReset: Date.now(),
+    redactor: createRedactor(),
   };
 
   // Handle incoming messages
@@ -188,6 +243,9 @@ async function endActiveSession(): Promise<string | null> {
   // Flush buffer
   if (session.debounceTimer) clearTimeout(session.debounceTimer);
   if (session.rateLimitTimer) clearTimeout(session.rateLimitTimer);
+  // Drain the redactor's overlap buffer so the final bytes are still masked.
+  const remaining = session.redactor.flush();
+  if (remaining) session.buffer += remaining;
   flushBuffer(session);
 
   // Send end frame
@@ -301,7 +359,10 @@ server.tool(
       };
     }
 
-    activeSession.buffer += data;
+    // Redact known secret values before buffering, matching the SDK/CLI
+    // broadcast path so the MCP server does not leak the agent's credentials.
+    const safe = activeSession.redactor.redact(data);
+    if (safe) activeSession.buffer += safe;
     if (activeSession.debounceTimer) clearTimeout(activeSession.debounceTimer);
     activeSession.debounceTimer = setTimeout(() => {
       if (activeSession) flushBuffer(activeSession);

@@ -263,12 +263,22 @@ describe('encodeResizeFrame/decodeResize', () => {
     expect(rows).toBe(1);
   });
 
-  it('encodes and decodes max uint16 (65535x65535)', () => {
+  it('clamps out-of-range uint16 dimensions to the safe max (65535 -> 1000)', () => {
+    // decodeResize clamps to [1, 1000] to prevent an oversized terminal grid
+    // from triggering a multi-gigabyte allocation in the VT parser (DoS).
     const frame = encodeResizeFrame(65535, 65535);
     const decoded = decodeFrame(frame);
     const { cols, rows } = decodeResize(decoded.payload);
-    expect(cols).toBe(65535);
-    expect(rows).toBe(65535);
+    expect(cols).toBe(1000);
+    expect(rows).toBe(1000);
+  });
+
+  it('preserves dimensions at the clamp boundary (1000x1000)', () => {
+    const frame = encodeResizeFrame(1000, 1000);
+    const decoded = decodeFrame(frame);
+    const { cols, rows } = decodeResize(decoded.payload);
+    expect(cols).toBe(1000);
+    expect(rows).toBe(1000);
   });
 
   it('payload is exactly 4 bytes', () => {

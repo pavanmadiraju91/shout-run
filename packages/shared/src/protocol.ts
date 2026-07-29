@@ -107,7 +107,12 @@ export function decodeViewerCount(payload: Uint8Array): number {
 export function decodeResize(payload: Uint8Array): { cols: number; rows: number } {
   if (payload.byteLength < 4) return { cols: 80, rows: 24 };
   const view = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-  return { cols: view.getUint16(0, false), rows: view.getUint16(2, false) };
+  // Clamp to sane terminal bounds. Wire values are uint16 (0-65535); an
+  // oversized grid (e.g. 65535x65535) would trigger a multi-gigabyte
+  // allocation in the VT parser and exhaust memory. Real terminals are far
+  // below 1000x1000, so this preserves all legitimate resize behavior.
+  const clamp = (n: number) => Math.min(Math.max(n, 1), 1000);
+  return { cols: clamp(view.getUint16(0, false)), rows: clamp(view.getUint16(2, false)) };
 }
 
 export function payloadToString(payload: Uint8Array): string {
