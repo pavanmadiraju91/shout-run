@@ -21,14 +21,14 @@
     "clean": "rm -rf dist .turbo"
   },
   "dependencies": {
-    "ws": "^8.21.0"
+    "ws": "^8.21.3"
   },
   "devDependencies": {
     "@shout/shared": "workspace:*",
-    "@types/node": "^22.0.0",
+    "@types/node": "^26.4.0",
     "@types/ws": "^8.5.12",
     "tsup": "^8.5.1",
-    "typescript": "^5.7.0"
+    "typescript": "^7.0.2"
   },
   "engines": {
     "node": ">=20"
